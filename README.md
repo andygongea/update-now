@@ -1,4 +1,4 @@
-# Update Now - Visual Studio Code Extension
+# Update Now - Update your deps
 
 **Update Now** is a powerful Visual Studio Code extension that manages your dependency updates in an effective and efficient way. It provides multiple update actions for the dependencies specified in your `package.json` file, making it an essential tool for modern software development.
 
