@@ -23,8 +23,6 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
     
     const codeLenses: vscode.CodeLens[] = [];
 
-    console.log('codelens => ', i++);
-
     if (isPackageJson(document)) {
       const packageJson = JSON.parse(document.getText());
       const dependencies = packageJson.dependencies || {};
@@ -82,8 +80,6 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
         // Skip when the current version is already the latest version
         if (updateType !== 'identical' && currentVersion !== "latest") {
 
-          console.log("create code lens => ", packageName, "(", currentVersion, "=>", latestVersion, ")");
-
           const range = new vscode.Range(line, character, line, character);
           let tooltip: string = "";
           let title: string = "";
@@ -97,17 +93,17 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
             title = `⇡ Minor update to ${latestVersion}`;
             tooltip = `👉 Click to update ${packageName} from ${currentVersion} to ${latestVersion}`;
           } else if (updateType === "within range") {
-            outOfRange++;
+            minors++;
             title = `⇡ Minor update to ${latestVersion} (within range)`;
             tooltip = `👉 Click to update ${packageName} from ${currentVersion} to ${latestVersion}`;
           } else if (updateType === "major") {
             majors++;
             title = `⇪ Major update to ${latestVersion}`;
-            tooltip = `⚠️ Click to update ${packageName} from ${currentVersion} to ${latestVersion}\nPlease check for any breaking changes before upgrading.`;
+            tooltip = `⚠️ Click to update ${packageName} from ${currentVersion} to ${latestVersion}\nPlease check for any breaking changes before updating.`;
           } else if (updateType === "out of range") {
             outOfRange++;
             title = `⇪ Major update to ${latestVersion} (out of specified range)`;
-            tooltip = `⚠️ The latest ${packageName} version: ${latestVersion} is not part of the ${currentVersion} range.\nPlease check for any breaking changes before upgrading.`;
+            tooltip = `⚠️ The latest ${packageName} version: ${latestVersion} is not part of the ${currentVersion} range.\nPlease check for any breaking changes before updating.`;
           } 
 
           codeLenses.push(
@@ -129,16 +125,14 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
         codeLenses.unshift(
           new vscode.CodeLens(summaryRange, {
             title: summaryTitle,
-            tooltip: "Please be careful when upgrading all dependencies at once.",
+            tooltip: "Please be careful when updating all dependencies at once.",
             command: "update-now.showNotification",
           })
         );
       }
     }
 
-    console.log('===============> before return codeLenses');
     return codeLenses;
-
   }
 
   // Refresh the CodeLenses when the package.json file is saved
@@ -161,7 +155,6 @@ async function updateDependency(
   packageName: string,
   latestVersion: string
 ): Promise<void> {
-  console.log("updateDependency");
   const document = await vscode.workspace.openTextDocument(documentUri);
   const text = document.getText();
 
@@ -193,8 +186,6 @@ function getPosition(document: vscode.TextDocument, packageName: string) {
 
 // Function to update all dependencies in the package.json file
 async function updateAllDependencies(documentUri: vscode.Uri): Promise<void> {
-  console.log("updateAllDependencies");
-
   const document = await vscode.workspace.openTextDocument(documentUri);
   const packageJson = JSON.parse(document.getText());
   const dependencies = packageJson.dependencies || {};

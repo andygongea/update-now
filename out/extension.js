@@ -53,7 +53,6 @@ class DependencyCodeLensProvider {
     // Function to provide CodeLens annotations for a given TextDocument
     async provideCodeLenses(document) {
         const codeLenses = [];
-        console.log('codelens => ', i++);
         if ((0, isPackageJson_1.isPackageJson)(document)) {
             const packageJson = JSON.parse(document.getText());
             const dependencies = packageJson.dependencies || {};
@@ -103,7 +102,6 @@ class DependencyCodeLensProvider {
                 const updateType = deps[packageName].update;
                 // Skip when the current version is already the latest version
                 if (updateType !== 'identical' && currentVersion !== "latest") {
-                    console.log("create code lens => ", packageName, "(", currentVersion, "=>", latestVersion, ")");
                     const range = new vscode.Range(line, character, line, character);
                     let tooltip = "";
                     let title = "";
@@ -118,19 +116,19 @@ class DependencyCodeLensProvider {
                         tooltip = `👉 Click to update ${packageName} from ${currentVersion} to ${latestVersion}`;
                     }
                     else if (updateType === "within range") {
-                        outOfRange++;
+                        minors++;
                         title = `⇡ Minor update to ${latestVersion} (within range)`;
                         tooltip = `👉 Click to update ${packageName} from ${currentVersion} to ${latestVersion}`;
                     }
                     else if (updateType === "major") {
                         majors++;
                         title = `⇪ Major update to ${latestVersion}`;
-                        tooltip = `⚠️ Click to update ${packageName} from ${currentVersion} to ${latestVersion}\nPlease check for any breaking changes before upgrading.`;
+                        tooltip = `⚠️ Click to update ${packageName} from ${currentVersion} to ${latestVersion}\nPlease check for any breaking changes before updating.`;
                     }
                     else if (updateType === "out of range") {
                         outOfRange++;
                         title = `⇪ Major update to ${latestVersion} (out of specified range)`;
-                        tooltip = `⚠️ The latest ${packageName} version: ${latestVersion} is not part of the ${currentVersion} range.\nPlease check for any breaking changes before upgrading.`;
+                        tooltip = `⚠️ The latest ${packageName} version: ${latestVersion} is not part of the ${currentVersion} range.\nPlease check for any breaking changes before updating.`;
                     }
                     codeLenses.push(new vscode.CodeLens(range, {
                         title: title,
@@ -145,18 +143,16 @@ class DependencyCodeLensProvider {
                 const summaryTitle = `🚀 Update Now: ${patches + minors + majors + outOfRange} available updates (${patches} x patch, ${minors} x minor, ${majors} x major, ${outOfRange} x out of range)`;
                 codeLenses.unshift(new vscode.CodeLens(summaryRange, {
                     title: summaryTitle,
-                    tooltip: "Please be careful when upgrading all dependencies at once.",
+                    tooltip: "Please be careful when updating all dependencies at once.",
                     command: "update-now.showNotification",
                 }));
             }
         }
-        console.log('===============> before return codeLenses');
         return codeLenses;
     }
 }
 // Function to update the version of a dependency in the package.json file
 async function updateDependency(documentUri, packageName, latestVersion) {
-    console.log("updateDependency");
     const document = await vscode.workspace.openTextDocument(documentUri);
     const text = document.getText();
     const updatedText = text.replace(new RegExp(`("${packageName}":\\s*")([^"]+)`, "g"), `$1${latestVersion}`);
@@ -175,7 +171,6 @@ function getPosition(document, packageName) {
 }
 // Function to update all dependencies in the package.json file
 async function updateAllDependencies(documentUri) {
-    console.log("updateAllDependencies");
     const document = await vscode.workspace.openTextDocument(documentUri);
     const packageJson = JSON.parse(document.getText());
     const dependencies = packageJson.dependencies || {};

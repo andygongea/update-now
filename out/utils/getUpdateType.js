@@ -26,7 +26,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getUpdateType = void 0;
 const semver = __importStar(require("semver"));
 function getUpdateType(currentValue, newValue) {
-    console.log("getUpdateType => currentValue", currentValue);
     const isRange = currentValue.startsWith("^") || currentValue.startsWith("~");
     const isLatest = currentValue === "latest";
     const isValidCurrent = isRange && semver.validRange(currentValue) !== null ||
@@ -43,7 +42,6 @@ function getUpdateType(currentValue, newValue) {
     }
     if (isRange) {
         if (!semver.satisfies(semver2.version, currentValue)) {
-            console.log("getUpdateType => out of range");
             return "out of range";
         }
         else {

@@ -5,8 +5,6 @@ export function getUpdateType(
   newValue: string
 ): "major" | "minor" | "patch" | "identical" | "out of range" | "within range" {
 
-  console.log("getUpdateType => currentValue", currentValue);
-
   const isRange = currentValue.startsWith("^") || currentValue.startsWith("~");
   const isLatest = currentValue === "latest";
   const isValidCurrent =
@@ -28,7 +26,6 @@ export function getUpdateType(
 
   if (isRange) {
     if (!semver.satisfies(semver2.version, currentValue)) {
-      console.log("getUpdateType => out of range");
       return "out of range";
     } else {
       const current = currentValue.replace("^", "").replace("~", "");

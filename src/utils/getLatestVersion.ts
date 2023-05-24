@@ -9,10 +9,8 @@ export async function getLatestVersion(
   
   try {
     const url = `https://registry.npmjs.org/${packageName}/latest`;
-    console.log(url);
     const response = await axios.get(url);
     const data = response.data as { version: string };
-    console.log(`${i}: getLatestVersion => ${packageName} - ${data.version}`);
     i++;
     return data.version;
   } catch (error) {

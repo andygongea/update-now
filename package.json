@@ -1,15 +1,25 @@
 {
   "name": "update-now",
   "displayName": "Update Now",
-  "description": "Update your Package.json files with ease",
+  "description": "Update your Package.json dependencies in no time.",
+  "publisher": "Andy Gongea",
   "version": "0.0.1",
   "engines": {
-    "vscode": "^1.77.0"
+    "vscode": "^1.5.0"
   },
+  "icon": "resources/logo@2x.png",
+  "author": {
+    "name": "Andy Gongea",
+    "email": "andy.gongea@gmail.com"
+  },
+  "pricing": "Free",
   "categories": [
     "Other"
   ],
-  "icon": "resources/logo@2x.png",
+  "repository": {
+    "type" : "git",
+    "url" : "https://github.com/andygongea/update-now.git"
+  },
   "activationEvents": [
     "onLanguage:json",
     "onLanguage:jsonc"
