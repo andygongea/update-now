@@ -1,6 +1,5 @@
 # Update Now - Visual Studio Code Extension
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 **Update Now** is a powerful Visual Studio Code extension that manages your dependency updates in an effective and efficient way. It provides multiple update actions for the dependencies specified in your `package.json` file, making it an essential tool for modern software development.
 
@@ -32,14 +31,8 @@ Open your `package.json` file within Visual Studio Code. Update Now will identif
 
 ## License
 
-This project is licensed under the terms of the MIT license. For more information, please see the [license file](LICENSE).
-
-## Contributing
-
-Contributions are always welcome! Please read our [contributing guide](CONTRIBUTING.md) for more information on how to get involved.
+TBD
 
 ## Feedback
 
 For any feedback or issues, please open an [issue on GitHub](https://github.com/your-username/UpdateNow/issues).
-
-Happy coding!
