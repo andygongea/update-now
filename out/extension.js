@@ -138,13 +138,19 @@ class DependencyCodeLensProvider {
                     }));
                 }
             }
+            const summaryRange = new vscode.Range(0, 0, 0, 0);
             if (patches + minors + majors + outOfRange > 0) {
-                const summaryRange = new vscode.Range(0, 0, 0, 0);
                 const summaryTitle = `🚀 Update Now: ${patches + minors + majors + outOfRange} available updates (${patches} x patch, ${minors} x minor, ${majors} x major, ${outOfRange} x out of range)`;
                 codeLenses.unshift(new vscode.CodeLens(summaryRange, {
                     title: summaryTitle,
                     tooltip: "Please be careful when updating all dependencies at once.",
                     command: "update-now.showNotification",
+                }));
+            }
+            else {
+                codeLenses.unshift(new vscode.CodeLens(summaryRange, {
+                    title: "Congrats! 🙌 Your dependencies are up to date.",
+                    command: "",
                 }));
             }
         }

@@ -8,7 +8,7 @@ const vscode_1 = __importDefault(require("vscode"));
 async function showUpdateNotification() {
     const updateButton = "Update";
     const cancelButton = "Cancel";
-    const message = 'You are about to update all dependencies! This action might cause your code to fail, so proceed with caution.*** ';
+    const message = 'You are about to update all dependencies! This action might cause your code to fail, so proceed with caution.';
     const result = await vscode_1.default.window.showWarningMessage(message, updateButton, cancelButton);
     if (result === updateButton) {
         vscode_1.default.commands.executeCommand("update-now.updateAllDependencies");
