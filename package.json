@@ -1,7 +1,7 @@
 {
   "name": "update-now",
   "displayName": "Update Now",
-  "description": "Update your Package.json dependencies in no time.",
+  "description": "Update your Package.json dependencies to their latest version in no time.",
   "keywords": [
     "Dependencies",
     "SCA",
