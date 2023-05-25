@@ -7,3 +7,9 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 ## [Unreleased]
 
 - Initial release
+
+- 0.0.2
+    - Added CodeLens for when all dependencies are up to date
+    - Updated copy in the readme
+
+
