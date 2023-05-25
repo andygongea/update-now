@@ -16,7 +16,8 @@
   "icon": "resources/logo@2x.png",
   "author": {
     "name": "Andy Gongea",
-    "email": "andy.gongea@gmail.com"
+    "email": "andy.gongea@gmail.com",
+    "url": "https://gongea.com"
   },
   "pricing": "Free",
   "categories": [
