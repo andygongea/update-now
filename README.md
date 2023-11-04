@@ -2,7 +2,7 @@
 
 **Update Now** is a powerful Visual Studio Code extension that manages your dependency updates in an effective and efficient way. It provides multiple update actions for the dependencies specified in your `package.json` file, making it an essential tool for modern software development.
 
-![update-no-update-all-dependencies](https://github.com/andygongea/update-now/assets/818805/6f797719-3acf-4301-9006-dba5db2b75ba)
+![update-no-update-all-dependencies](https://github.com/andygongea/update-now/assets/818805/4d7168e0-43c8-4428-92bf-3f316f41e7eb)
 *This extension and the content on this page were written together with ChatGPT. Prompts by* **Andy Gongea😁**
 
 ## Features
