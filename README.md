@@ -7,9 +7,9 @@
 
 ## Features
 
-1. ✅ **Patch Update**: Shows the latest available patch updates for your dependencies. Patch updates generally include bug fixes and are fully backward compatible.
+1. ✅ **Patch Update**: Shows the latest patch updates for your dependencies. Patch updates generally include bug fixes and are fully backward compatible.
 2. ✨ **Minor Update**: Reveals the latest minor updates for your dependencies. Minor updates typically introduce new features but are designed to be backward compatible.
-3. ❗ **Major Update**: Displays the latest major updates for your dependencies. Major updates can make changes that are not backward compatible, and hence may require additional modifications in your project.
+3. ❗ **Major Update**: Displays the latest major updates for your dependencies. Major updates can make changes that are not backward compatible and hence may require additional modifications in your project.
 4. ❗ **Range Update**: Provides a warning in case the update is outside of your specified range.
 
 ## Importance of Updating Dependencies
@@ -18,7 +18,7 @@ Updating dependencies to their latest version is crucial in software development
 
 1. 🐞 **Bug Fixes**: Updates usually include fixes for bugs found in previous versions, leading to more stable and reliable software.
 2. 🏃‍♀️ **Performance Improvements**: New versions of dependencies can include optimizations that improve performance, making your software faster and more efficient.
-3. 🆕 **New Features**: Updates may introduce new features, which can enable your software to do more and stay competitive.
+3. 🆕 **New Features**: Updates may introduce new features, enabling your software to do more and stay competitive.
 4. 🔒 **Security**: Updates often include patches for security vulnerabilities. Keeping dependencies updated ensures your software remains secure against known issues.
 
 
@@ -30,19 +30,19 @@ You can install this extension from the Visual Studio Code Marketplace. Search f
 
 ## Usage
 
-Open your `package.json` file within Visual Studio Code. Update Now will identify the dependencies and display update actions in the form of a code lenses.
+Open your `package.json` file within Visual Studio Code. Update Now will identify the dependencies and display update actions in the form of code lenses.
 
 ### How do I update a dependency?
 
 Each dependency can be updated individually, depending on your project's needs and requirements.
-1. Open `package.jsone` file
+1. Open `package.json` file
 2. Scroll down to the dependencies list
 3. Click on the Codelens (annotation on top of the package name)
 4. Run `npm install`.
 
 ### How do I update all outdated dependencies?
 
-There is a global update command and action to update all dependencies at once.
+There is a global update command and action to update all dependencies simultaneously.
 1. The command can be executed by searching for it in the Command Pallete:  
   - **🚀 Update now: Update all dependencies**.
 2. The second option is the code lens that is at the top of each package.json file: 
