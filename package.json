@@ -9,7 +9,7 @@
     "Package.json"
   ],
   "publisher": "AndyGongea",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "engines": {
     "vscode": "^1.77.0"
   },
