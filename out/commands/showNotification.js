@@ -6,9 +6,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.showUpdateNotification = void 0;
 const vscode_1 = __importDefault(require("vscode"));
 async function showUpdateNotification() {
-    const updateButton = "Update";
+    const updateButton = "Update all dependencies";
     const cancelButton = "Cancel";
-    const message = 'You are about to update all dependencies! This action might cause your code to fail, so proceed with caution.';
+    const message = 'Be aware! ✋ You are about to update all dependencies. Proceeding might cause your code to fail, so act carefully.';
     const result = await vscode_1.default.window.showWarningMessage(message, updateButton, cancelButton);
     if (result === updateButton) {
         vscode_1.default.commands.executeCommand("update-now.updateAllDependencies");

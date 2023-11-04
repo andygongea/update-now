@@ -28,9 +28,7 @@ const semver = __importStar(require("semver"));
 function getUpdateType(currentValue, newValue) {
     const isRange = currentValue.startsWith("^") || currentValue.startsWith("~");
     const isLatest = currentValue === "latest";
-    const isValidCurrent = isRange && semver.validRange(currentValue) !== null ||
-        isLatest ||
-        !isRange && semver.valid(currentValue) !== null;
+    const isValidCurrent = isRange && semver.validRange(currentValue) !== null || isLatest || !isRange && semver.valid(currentValue) !== null;
     const isValidNew = semver.valid(newValue);
     if (!isValidCurrent || !isValidNew) {
         throw new Error("Invalid semver string");
@@ -45,12 +43,17 @@ function getUpdateType(currentValue, newValue) {
             return "out of range";
         }
         else {
-            const current = currentValue.replace("^", "").replace("~", "");
-            if (current === semver2.version) {
-                return "identical";
+            if (semver1.major !== semver2.major) {
+                return "major";
+            }
+            else if (semver1.minor !== semver2.minor) {
+                return "minor";
+            }
+            else if (semver1.patch !== semver2.patch) {
+                return "patch";
             }
             else {
-                return "within range";
+                return "latest";
             }
         }
     }
@@ -64,7 +67,7 @@ function getUpdateType(currentValue, newValue) {
         return "patch";
     }
     else {
-        return "identical";
+        return "latest";
     }
 }
 exports.getUpdateType = getUpdateType;

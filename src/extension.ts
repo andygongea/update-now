@@ -78,7 +78,7 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
         const updateType = deps[packageName].update;
 
         // Skip when the current version is already the latest version
-        if (updateType !== 'identical' && currentVersion !== "latest") {
+        if (updateType !== 'latest' && currentVersion !== "latest") {
 
           const range = new vscode.Range(line, character, line, character);
           let tooltip: string = "";
@@ -86,24 +86,20 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
 
           if (updateType === "patch") {
             patches++;
-            title = `⇡ Patch to ${latestVersion}`;
-            tooltip = `✅ Click to patch ${packageName} from ${currentVersion} to ${latestVersion}`;
+            title = `✅ Apply patch to version ⇢ ${latestVersion}`;
+            tooltip = `Click to patch ${packageName} from ${currentVersion} to ${latestVersion}.`;
           } else if (updateType === "minor") {
             minors++;
-            title = `⇡ Minor update to ${latestVersion}`;
-            tooltip = `👉 Click to update ${packageName} from ${currentVersion} to ${latestVersion}`;
-          } else if (updateType === "within range") {
-            minors++;
-            title = `⇡ Minor update to ${latestVersion} (within range)`;
+            title = `✨ Update to minor version ⇢ ${latestVersion}`;
             tooltip = `👉 Click to update ${packageName} from ${currentVersion} to ${latestVersion}`;
           } else if (updateType === "major") {
             majors++;
-            title = `⇪ Major update to ${latestVersion}`;
-            tooltip = `⚠️ Click to update ${packageName} from ${currentVersion} to ${latestVersion}\nPlease check for any breaking changes before updating.`;
+            title = `❗ Update to major version ⇢ ${latestVersion} `;
+            tooltip = `⚠️ Click to update ${packageName} from ${currentVersion} to ${latestVersion}\n Check for any breaking changes before updating.`;
           } else if (updateType === "out of range") {
             outOfRange++;
-            title = `⇪ Major update to ${latestVersion} (out of specified range)`;
-            tooltip = `⚠️ The latest ${packageName} version: ${latestVersion} is not part of the ${currentVersion} range.\nPlease check for any breaking changes before updating.`;
+            title = `❗ Update to out of date version ⇢ ${latestVersion}`;
+            tooltip = `⚠️ The latest ${packageName} version ${latestVersion} is not part of the ${currentVersion} range.\n Check for any breaking changes before updating.`;
           } 
 
           codeLenses.push(
