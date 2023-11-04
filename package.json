@@ -24,8 +24,8 @@
     "Programming Languages"
   ],
   "repository": {
-    "type" : "git",
-    "url" : "https://github.com/andygongea/update-now.git"
+    "type": "git",
+    "url": "https://github.com/andygongea/update-now.git"
   },
   "activationEvents": [
     "onLanguage:json",
@@ -66,18 +66,18 @@
   "devDependencies": {
     "@types/glob": "^8.0.0",
     "@types/mocha": "^10.0.1",
-    "@types/node": "16.x",
+    "@types/node": "16.18.60",
     "@types/vscode": "^1.77.0",
-    "@typescript-eslint/eslint-plugin": "^5.45.0",
-    "@typescript-eslint/parser": "^5.45.0",
+    "@typescript-eslint/eslint-plugin": "^5.62.0",
+    "@typescript-eslint/parser": "^5.62.0",
     "@vscode/test-electron": "^2.2.0",
     "eslint": "^8.28.0",
-    "glob": "^8.0.3",
-    "mocha": "^10.1.0",
-    "typescript": "^4.9.3"
+    "glob": "^8.1.0",
+    "mocha": "^10.2.0",
+    "typescript": "^4.9.5"
   },
   "dependencies": {
-    "axios": "1.4.0",
-    "semver": "7.5.1"
+    "axios": "1.6.0",
+    "semver": "7.5.4"
   }
 }
