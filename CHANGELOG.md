@@ -4,11 +4,19 @@ All notable changes to the "update-now" extension will be documented in this fil
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
-## [Unreleased]
+## [0.0.3] - 2023-11-05
 
-## [0.0.1] - 2023-05-24
+### Added
 
-- Initial release
+- Preview image in README.md
+- Emojis for update type
+  
+### Changed
+
+- Updated copy in the readme
+- Cleaned code
+- Updated dependencies to their latest version: axios, semver
+
 
 
 ## [0.0.2] - 2023-05-25
@@ -24,3 +32,9 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 - Updated dependencies to their latest version: axios, semver
 
 
+## [0.0.1] - 2023-05-24
+
+- Initial release
+
+
+## [Unreleased]
