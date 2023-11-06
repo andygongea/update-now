@@ -5,8 +5,6 @@ import { showUpdateNotification } from "./commands/showNotification";
 import { debounce } from "./utils/debounce";
 import { getUpdateType } from "./utils/getUpdateType";
 
-let i = 1;
-
 // CodeLensProvider class responsible for providing CodeLens annotations
 class DependencyCodeLensProvider implements vscode.CodeLensProvider {
   // Event emitter to notify VS Code when CodeLens annotations need to be updated
@@ -86,19 +84,19 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
 
           if (updateType === "patch") {
             patches++;
-            title = `✅ Apply patch to version ⇢ ${latestVersion}`;
+            title = `✅ Patch to version ⇢ ${latestVersion}`;
             tooltip = `Click to patch ${packageName} from ${currentVersion} to ${latestVersion}.`;
           } else if (updateType === "minor") {
             minors++;
-            title = `✨ Update to minor version ⇢ ${latestVersion}`;
-            tooltip = `👉 Click to update ${packageName} from ${currentVersion} to ${latestVersion}`;
+            title = `❇️ Update to minor version ⇢ ${latestVersion}`;
+            tooltip = `Click to update ${packageName} from ${currentVersion} to ${latestVersion}`;
           } else if (updateType === "major") {
             majors++;
-            title = `❗ Update to major version ⇢ ${latestVersion} `;
-            tooltip = `⚠️ Click to update ${packageName} from ${currentVersion} to ${latestVersion}\n Check for any breaking changes before updating.`;
+            title = `🚧 Update to major version ⇢ ${latestVersion} `;
+            tooltip = `⚠️ Click to update ${packageName} from ${currentVersion} to ${latestVersion}.\n Check for any breaking changes before updating.`;
           } else if (updateType === "out of range") {
             outOfRange++;
-            title = `❗ Update to out of date version ⇢ ${latestVersion}`;
+            title = `🚧 Update to version (out of range) ⇢ ${latestVersion}`;
             tooltip = `⚠️ The latest ${packageName} version ${latestVersion} is not part of the ${currentVersion} range.\n Check for any breaking changes before updating.`;
           } 
 
@@ -172,7 +170,14 @@ async function updateDependency(
     new vscode.Range(document.positionAt(0), document.positionAt(text.length)),
     updatedText
   );
+
+  // Apply the edit to the document
   await vscode.workspace.applyEdit(edit);
+
+  // Save the document
+  await document.save();
+
+  //vscode.window.showInformationMessage("File saved after updating the dependency.");
 }
 
 function getPosition(document: vscode.TextDocument, packageName: string) {
