@@ -114,7 +114,7 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
       const summaryRange = new vscode.Range(0, 0, 0, 0);
       if (patches + minors + majors + outOfRange > 0) {
         const summaryTitle = `🚀 Update Now: ${patches + minors + majors + outOfRange
-          } available updates (${patches} x patch, ${minors} x minor, ${majors} x major, ${outOfRange} x out of range)`;
+          } available updates (✅ ${patches} x Patch, ❇️ ${minors} x Minor, 🚧 ${majors} x Major, 🚧 ${outOfRange} x Out of range)`;
 
         codeLenses.unshift(
           new vscode.CodeLens(summaryRange, {
