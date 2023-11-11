@@ -8,9 +8,10 @@
 ## Features
 
 1. ✅ **Patch Update**: Shows the latest patch updates for your dependencies. Patch updates generally include bug fixes and are fully backward compatible.
-2. ✨ **Minor Update**: Reveals the latest minor updates for your dependencies. Minor updates typically introduce new features but are designed to be backward compatible.
-3. ❗ **Major Update**: Displays the latest major updates for your dependencies. Major updates can make changes that are not backward compatible and hence may require additional modifications in your project.
-4. ❗ **Range Update**: Provides a warning in case the update is outside of your specified range.
+2. ⚠️ **Minor Update**: Reveals the latest minor updates for your dependencies. Minor updates typically introduce new features but are designed to be backward compatible.
+3. 🛑 **Major Update**: Displays the latest major updates for your dependencies. Major updates can make changes that are not backward compatible and hence may require additional modifications in your project.
+
+To reduce the complexity of the UI and reduce the cognitive load, **range updates** were removed from the statistics.
 
 ## Importance of Updating Dependencies
 
@@ -46,4 +47,4 @@ There is a global update command and action to update all dependencies simultane
 1. The command can be executed by searching for it in the Command Pallete:  
   - **🚀 Update now: Update all dependencies**.
 2. The second option is the code lens that is at the top of each package.json file: 
-  - **🚀 Update now: 25 available updates (5 x patch, 10 x minor, 5 x major, 5 x out of range )**
+  - **🚀 Update now: 25 available updates (5 x patch, 10 x minor, 5 x major)**

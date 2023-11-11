@@ -5,6 +5,13 @@ import { showUpdateNotification } from "./commands/showNotification";
 import { debounce } from "./utils/debounce";
 import { getUpdateType } from "./utils/getUpdateType";
 
+type VersionInfo = {
+  version: string; // assuming 'version' is a string
+  description: string; // assuming 'description' is a string
+  author: Record<string, string> ; // assuming 'author' is a string
+  dependencies: Record<string, string>; // assuming 'dependencies' is an object with string properties
+};
+
 // CodeLensProvider class responsible for providing CodeLens annotations
 class DependencyCodeLensProvider implements vscode.CodeLensProvider {
   // Event emitter to notify VS Code when CodeLens annotations need to be updated
@@ -28,9 +35,10 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
       // If promises have not been created yet, create them
       if (this.promises.length === 0) {
         this.promises = Object.keys(dependencies).map(async (packageName) => {
-          const latestVersion = await getLatestVersion(packageName);
+          const latestVersionData = (await getLatestVersion(packageName)) as VersionInfo | null;
           const currentVersion = dependencies[packageName];
           const position = getPosition(document, packageName);
+          const latestVersion = latestVersionData ? latestVersionData.version : null;
           return {
             packageName,
             currentVersion,
@@ -38,6 +46,8 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
             update: getUpdateType(currentVersion, latestVersion!),
             line: position['line'],
             character: position['character'],
+            description: latestVersionData?.description,
+            author: latestVersionData?.author?.name || "multiple controbutors"
           };
         });
       }
@@ -51,6 +61,8 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
             update: dependencyData.update,
             line: dependencyData.line,
             character: dependencyData.character,
+            description: dependencyData.description,
+            author: dependencyData.author
           };
         }
       }
@@ -60,7 +72,7 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
       let patches = 0;
       let minors = 0;
       let majors = 0;
-      let outOfRange = 0;
+      // let outOfRange = 0;
 
       // Loop through all dependencies in the package.json file
       for (const packageName in deps) {
@@ -74,6 +86,8 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
         const character = deps[packageName].character;
         const latestVersion = deps[packageName].latestVersion;
         const updateType = deps[packageName].update;
+        const description = deps[packageName].description;
+        const creator = deps[packageName].author;
 
         // Skip when the current version is already the latest version
         if (updateType !== 'latest' && currentVersion !== "latest") {
@@ -85,19 +99,15 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
           if (updateType === "patch") {
             patches++;
             title = `✅ Patch to version ⇢ ${latestVersion}`;
-            tooltip = `Click to patch ${packageName} from ${currentVersion} to ${latestVersion}.`;
+            tooltip = `📦 ${packageName}@${currentVersion} ⇢ ${latestVersion} \n  ├ by ${creator} \n  └ ${description}  \n \n  Patches usually cover bug fixes and they are safe to updates.`;
           } else if (updateType === "minor") {
             minors++;
-            title = `❇️ Update to minor version ⇢ ${latestVersion}`;
-            tooltip = `Click to update ${packageName} from ${currentVersion} to ${latestVersion}`;
+            title = `⚠️ Update to minor version ⇢ ${latestVersion}`;
+            tooltip = `📦 ${packageName}@${currentVersion} ⇢ ${latestVersion} \n  ├ by ${creator} \n  └ ${description}  \n \n  Minor versions contain backward compatible API changes/additions. \n  👉 Test the functionality after updating.`;
           } else if (updateType === "major") {
             majors++;
-            title = `🚧 Update to major version ⇢ ${latestVersion} `;
-            tooltip = `⚠️ Click to update ${packageName} from ${currentVersion} to ${latestVersion}.\n Check for any breaking changes before updating.`;
-          } else if (updateType === "out of range") {
-            outOfRange++;
-            title = `🚧 Update to version (out of range) ⇢ ${latestVersion}`;
-            tooltip = `⚠️ The latest ${packageName} version ${latestVersion} is not part of the ${currentVersion} range.\n Check for any breaking changes before updating.`;
+            title = `🛑 Update to major version ⇢ ${latestVersion} `;
+            tooltip = `📦 ${packageName}@${currentVersion} ⇢ ${latestVersion} \n  ├ by ${creator} \n  └ ${description}  \n \n  Major versions contain backward incompatible changes, which could break your code. \n  👉 Test the functionality after updating.`;
           } 
 
           codeLenses.push(
@@ -112,14 +122,13 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
       }
 
       const summaryRange = new vscode.Range(0, 0, 0, 0);
-      if (patches + minors + majors + outOfRange > 0) {
-        const summaryTitle = `🚀 Update Now: ${patches + minors + majors + outOfRange
-          } available updates (${patches} x patch, ${minors} x minor, ${majors} x major, ${outOfRange} x out of range)`;
+      if (patches + minors + majors > 0) {
+        const summaryTitle = `🚀 Update Now: ${patches + minors + majors } dependencies updates (✅ ${patches} x patch, ⚠️ ${minors} x minor, 🛑 ${majors} x major)`;
 
         codeLenses.unshift(
           new vscode.CodeLens(summaryRange, {
             title: summaryTitle,
-            tooltip: "Please be careful when updating all dependencies at once.",
+            tooltip: "Please be careful when updating all dependencies at once. \nMINOR ⚠️ and MAJOR 🛑 updates can break your code functionality. ",
             command: "update-now.showNotification",
           })
         );
@@ -200,10 +209,10 @@ async function updateAllDependencies(documentUri: vscode.Uri): Promise<void> {
   const dependenciesToUpdate: string[] = [];
 
   for (const packageName in dependencies) {
-    const latestVersion = await getLatestVersion(packageName);
-    if (latestVersion) {
+    const latestVersionData = (await getLatestVersion(packageName)) as VersionInfo | null;
+    if (latestVersionData) {
       dependenciesToUpdate.push(packageName);
-      packageJson.dependencies[packageName] = latestVersion; // update the version number
+      packageJson.dependencies[packageName] = latestVersionData.version; // update the version number
     }
   }
 
@@ -219,6 +228,7 @@ async function updateAllDependencies(documentUri: vscode.Uri): Promise<void> {
       updatedText
     );
     await vscode.workspace.applyEdit(edit);
+    await document.save();
     vscode.window.showInformationMessage(
       "All dependencies updated to their latest version."
     );
