@@ -1,13 +1,12 @@
 import * as semver from "semver";
 
-export function getUpdateType(
-  currentValue: string,
-  newValue: string
-): "major" | "minor" | "patch" | "latest" | "out of range" {
-
+export function getUpdateType(currentValue: string, newValue: string): "major" | "minor" | "patch" | "latest" {
   const isRange = currentValue.startsWith("^") || currentValue.startsWith("~");
   const isLatest = currentValue === "latest";
-  const isValidCurrent = isRange && semver.validRange(currentValue) !== null || isLatest || !isRange && semver.valid(currentValue) !== null;
+  const isValidCurrent =
+    (isRange && semver.validRange(currentValue) !== null) ||
+    isLatest ||
+    (!isRange && semver.valid(currentValue) !== null);
   const isValidNew = semver.valid(newValue);
 
   if (!isValidCurrent || !isValidNew) {
@@ -19,22 +18,6 @@ export function getUpdateType(
 
   if (!semver2) {
     throw new Error("Invalid semver string");
-  }
-
-  if (isRange) {
-    if (!semver.satisfies(semver2.version, currentValue)) {
-      return "out of range";
-    } else {
-      if (semver1!.major !== semver2.major) {
-        return "major";
-      } else if (semver1!.minor !== semver2.minor) {
-        return "minor";
-      } else if (semver1!.patch !== semver2.patch) {
-        return "patch";
-      } else {
-        return "latest";
-      }
-    } 
   }
 
   if (semver1!.major !== semver2.major) {
