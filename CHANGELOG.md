@@ -4,6 +4,18 @@ All notable changes to the "update-now" extension will be documented in this fil
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [0.0.6] - 2023-11-19
+
+### Added
+
+ - New informationMessage when an update is performed
+
+### Changed
+
+- Updated copy in the readme and changelog
+- Updated emojis to ❇️ ✴️ 🛑 for patch, minor, major update
+- Updated dependencies versions
+
 
 ## [0.0.5] - 2023-11-11
 

@@ -7,8 +7,8 @@
 
 ## Features
 
-1. ✅ **Patch Update**: Shows the latest patch updates for your dependencies. Patch updates generally include bug fixes and are fully backward compatible.
-2. ⚠️ **Minor Update**: Reveals the latest minor updates for your dependencies. Minor updates typically introduce new features but are designed to be backward compatible.
+1. ❇️ **Patch Update**: Shows the latest patch updates for your dependencies. Patch updates generally include bug fixes and are fully backward compatible.
+2. ✴️ **Minor Update**: Reveals the latest minor updates for your dependencies. Minor updates typically introduce new features but are designed to be backward compatible.
 3. 🛑 **Major Update**: Displays the latest major updates for your dependencies. Major updates can make changes that are not backward compatible and hence may require additional modifications in your project.
 
 To reduce the complexity of the UI and reduce the cognitive load, **range updates** were removed from the statistics.
@@ -24,7 +24,7 @@ Updating dependencies to their latest version is crucial in software development
 4. 🔒 **Security**: Updates often include patches for security vulnerabilities. Keeping dependencies updated ensures your software remains secure against known issues.
 
 
-*``` However, updating dependencies can introduce risks if not properly managed. It's essential that after every update, developers rigorously test their code to ensure the updates have not caused any regressions or issues. Proper testing allows developers to take advantage of the benefits of updates while minimizing any potential risks. ```*
+*It is essential that after every update, developers rigorously test their code to ensure the updates have not caused any regressions or issues. Proper testing allows developers to take advantage of the benefits of updates while minimizing any potential risks.*
 
 ## Installation
 
@@ -48,4 +48,4 @@ There is a global update command and action to update all dependencies simultane
 1. The command can be executed by searching for it in the Command Pallete:  
   - **🚀 Update now: Update all dependencies**.
 2. The second option is the code lens that is at the top of each package.json file: 
-  - **🚀 Update now: 25 available updates (5 x patch, 10 x minor, 5 x major)**
+  - **Update now: 25 available updates (❇️ 5 x patch, ✴️ 10 x minor, 🛑 5 x major)**

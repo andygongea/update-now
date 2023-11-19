@@ -1,13 +1,12 @@
 import * as semver from "semver";
 
-export function getUpdateType(
-  currentValue: string,
-  newValue: string
-): "major" | "minor" | "patch" | "latest" {
-
+export function getUpdateType(currentValue: string, newValue: string): "major" | "minor" | "patch" | "latest" {
   const isRange = currentValue.startsWith("^") || currentValue.startsWith("~");
   const isLatest = currentValue === "latest";
-  const isValidCurrent = isRange && semver.validRange(currentValue) !== null || isLatest || !isRange && semver.valid(currentValue) !== null;
+  const isValidCurrent =
+    (isRange && semver.validRange(currentValue) !== null) ||
+    isLatest ||
+    (!isRange && semver.valid(currentValue) !== null);
   const isValidNew = semver.valid(newValue);
 
   if (!isValidCurrent || !isValidNew) {
