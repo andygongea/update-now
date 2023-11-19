@@ -14,7 +14,7 @@
 To reduce the complexity of the UI and reduce the cognitive load, **range updates** were removed from the statistics.
 
 ## Importance of Updating Dependencies
-![update-now-dependency-tooltip-vscode-extension](https://github.com/andygongea/update-now/assets/818805/ad1a0090-b326-4fd9-9541-a2562635f26e)
+![update-now-vscode-extensions](https://github.com/andygongea/update-now/assets/818805/703334ce-6d38-41dc-8af7-9accadc0c6d0)
 
 Updating dependencies to their latest version is crucial in software development for several reasons:
 
