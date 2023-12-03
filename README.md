@@ -9,9 +9,7 @@
 
 1. ❇️ **Patch Update**: Shows the latest patch updates for your dependencies. Patch updates generally include bug fixes and are fully backward compatible.
 2. ✴️ **Minor Update**: Reveals the latest minor updates for your dependencies. Minor updates typically introduce new features but are designed to be backward compatible.
-3. 🛑 **Major Update**: Displays the latest major updates for your dependencies. Major updates can make changes that are not backward compatible and hence may require additional modifications in your project.
-
-To reduce the complexity of the UI and reduce the cognitive load, **range updates** were removed from the statistics.
+3. 🛑 **Major Update**: Displays the latest major updates for your dependencies. Major updates can make changes that are not backward compatible and may require additional modifications in your project.
 
 ## Importance of Updating Dependencies
 ![update-now-vscode-extensions](https://github.com/andygongea/update-now/assets/818805/703334ce-6d38-41dc-8af7-9accadc0c6d0)
@@ -32,7 +30,7 @@ You can install this extension from the Visual Studio Code Marketplace. Search f
 
 ## Usage
 
-Open your `package.json` file within Visual Studio Code. Update Now will identify the dependencies and display update actions in the form of code lenses.
+Open your `package.json` file within Visual Studio Code. Update Now will identify the dependencies and display update actions as code lenses.
 
 ### How do I update a dependency?
 
@@ -49,3 +47,12 @@ There is a global update command and action to update all dependencies simultane
   - **🚀 Update now: Update all dependencies**.
 2. The second option is the code lens that is at the top of each package.json file: 
   - **Update now: 25 available updates (❇️ 5 x patch, ✴️ 10 x minor, 🛑 5 x major)**
+
+### Which are the supported package managers?
+For now, the only package manager supported is NPM. There is a work in progress to support multiple package managers, the upcoming one being Packagist for the PHP ecosystem.
+
+![npm-logo](https://github.com/andygongea/update-now/assets/818805/d05e2127-af59-4cf2-b33e-d755d42a1dd2)
+
+### Wanna suggest a new feature/package manager?
+Ask for a new feature or enhancement by opening an issue: ["Request feature"](https://github.com/andygongea/update-now/issues/new)
+
