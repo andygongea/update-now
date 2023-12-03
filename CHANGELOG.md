@@ -4,6 +4,12 @@ All notable changes to the "update-now" extension will be documented in this fil
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [0.0.7] - 2023-12-03
+
+### Fixed
+
+ - Range updates `~` and `^` are preserved when the latest version is a patch or a minor update.
+
 ## [0.0.6] - 2023-11-19
 
 ### Added
