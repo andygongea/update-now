@@ -3,10 +3,7 @@ import * as semver from "semver";
 export function getUpdateType(currentValue: string, newValue: string): "major" | "minor" | "patch" | "latest" {
   const isRange = currentValue.startsWith("^") || currentValue.startsWith("~");
   const isLatest = currentValue === "latest";
-  const isValidCurrent =
-    (isRange && semver.validRange(currentValue) !== null) ||
-    isLatest ||
-    (!isRange && semver.valid(currentValue) !== null);
+  const isValidCurrent = (isRange && semver.validRange(currentValue) !== null) || isLatest || (!isRange && semver.valid(currentValue) !== null);
   const isValidNew = semver.valid(newValue);
 
   if (!isValidCurrent || !isValidNew) {
@@ -20,7 +17,7 @@ export function getUpdateType(currentValue: string, newValue: string): "major" |
     throw new Error("Invalid semver string");
   }
 
-  if (semver1!.major !== semver2.major) {
+    if (semver1!.major !== semver2.major) {
     return "major";
   } else if (semver1!.minor !== semver2.minor) {
     return "minor";
