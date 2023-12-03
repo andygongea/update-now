@@ -54,5 +54,5 @@ For now, the only package manager supported is NPM. There is a work in progress 
 ![npm-logo](https://github.com/andygongea/update-now/assets/818805/d05e2127-af59-4cf2-b33e-d755d42a1dd2)
 
 ### Wanna suggest a new feature/package manager?
-Ask for a new feature or enhancement by opening an issue: ["Request feature"](https://github.com/andygongea/update-now/issues/new)
+Ask for a new feature or enhancement by starting a new discussion: ["Request feature"](https://github.com/andygongea/update-now/discussions/new?category=ideas)
 
