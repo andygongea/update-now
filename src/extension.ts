@@ -6,6 +6,7 @@ import { debounce } from "./utils/debounce";
 import { isComposerJson } from "./vendors/composer/isComposerJson";
 import { processPackageJSON } from "./vendors/npm/processPackageJSON";
 import { processComposerJSON } from "./vendors/composer/processComposerJSON";
+import semver from 'semver';
 
 type VersionInfo = {
   version: string; // assuming 'version' is a string
@@ -77,6 +78,17 @@ async function updateDependency(documentUri: vscode.Uri, packageName: string, la
   vscode.window.showInformationMessage(`Awesome! 📦 ${packageName} has been updated to version: ${latestVersion}.`);
 }
 
+function getPosition(document: vscode.TextDocument, packageName: string) {
+  const regex = new RegExp(`"${packageName}"\\s*:`);
+  const line = document
+    .getText()
+    .split("\n")
+    .findIndex((line) => regex.test(line));
+  const character = document.lineAt(line).text.indexOf(`"${packageName}":`);
+
+  return { line: line, character: character };
+}
+
 // Function to update all dependencies in the package.json file
 async function updateAllDependencies(documentUri: vscode.Uri): Promise<void> {
   showProcessingStatus(`updating all dependencies...`, true);
@@ -86,10 +98,26 @@ async function updateAllDependencies(documentUri: vscode.Uri): Promise<void> {
   const dependenciesToUpdate: string[] = [];
 
   for (const packageName in dependencies) {
+    const currentVersion = dependencies[packageName];
+    const versionPrefix = currentVersion.match(/^[~^]/)?.[0]; // Match ^ or ~ at the start
+    const strippedCurrentVersion = currentVersion.replace(/^[~^]/, ''); // Remove ^ or ~ from the current version
+
     const latestVersionData = (await getLatestVersion(packageName)) as VersionInfo | null;
-    if (latestVersionData) {
-      dependenciesToUpdate.push(packageName);
-      packageJson.dependencies[packageName] = latestVersionData.version; // update the version number
+    if (latestVersionData && semver.valid(latestVersionData.version)) {
+      const isPatchUpdate = semver.diff(latestVersionData.version, strippedCurrentVersion) === 'patch';
+      const isMinorUpdate = semver.diff(latestVersionData.version, strippedCurrentVersion) === 'minor';
+
+      let newVersion = latestVersionData.version;
+      if (versionPrefix === '~' && isPatchUpdate) {
+        newVersion = '~' + newVersion;
+      } else if (versionPrefix === '^' && (isPatchUpdate || isMinorUpdate)) {
+        newVersion = '^' + newVersion;
+      }
+
+      if (newVersion !== currentVersion) {
+        dependenciesToUpdate.push(packageName);
+        packageJson.dependencies[packageName] = newVersion;
+      }
     }
   }
 
@@ -110,6 +138,7 @@ async function updateAllDependencies(documentUri: vscode.Uri): Promise<void> {
     return;
   }
 }
+
 
 // Extension activation function, called when the extension is activated
 export function activate(context: vscode.ExtensionContext): void {

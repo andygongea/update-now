@@ -11,7 +11,7 @@
     "Packages"
   ],
   "publisher": "AndyGongea",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "engines": {
     "vscode": "^1.77.0"
   },
