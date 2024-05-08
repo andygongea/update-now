@@ -4,7 +4,7 @@ import { getLatestVersion } from "./utils/getLatestVersion";
 import { showUpdateNotification } from "./commands/showNotification";
 import { debounce } from "./utils/debounce";
 import { getUpdateType } from "./utils/getUpdateType";
-import semver from 'semver';
+import semver from "semver";
 
 type VersionInfo = {
   version: string; // assuming 'version' is a string
@@ -24,15 +24,17 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
 
   // Function to provide CodeLens annotations for a given TextDocument
   async provideCodeLenses(document: vscode.TextDocument): Promise<vscode.CodeLens[]> {
+    console.log('provideCodeLenses');
     const codeLenses: vscode.CodeLens[] = [];
 
     if (isPackageJson(document)) {
       const packageJson = JSON.parse(document.getText());
       const dependencies = packageJson.dependencies || {};
+      const devDependencies = packageJson.devDependencies || {};
 
-      // If promises have not been created yet, create them
+      // If promises have not been created yet, create them for dependencies
       if (this.promises.length === 0) {
-        this.promises = Object.keys(dependencies).map(async (packageName) => {
+        const dependenciesPromises = Object.keys(dependencies).map(async (packageName) => {
           const latestVersionData = (await getLatestVersion(packageName)) as VersionInfo | null;
           const currentVersion = dependencies[packageName];
           const position = getPosition(document, packageName);
@@ -48,7 +50,32 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
             author: latestVersionData?.author?.name || "various contributors",
           };
         });
+        // If promises have not been created yet, create them for devDependencies
+        const devDependenciesPromises = Object.keys(devDependencies).map(async (packageName) => {
+          const latestVersionData = (await getLatestVersion(packageName)) as VersionInfo | null;
+          const currentVersion = devDependencies[packageName];
+          const position = getPosition(document, packageName);
+          const latestVersion = latestVersionData ? latestVersionData.version : null;
+          return {
+            packageName,
+            currentVersion,
+            latestVersion,
+            update: getUpdateType(currentVersion, latestVersion!),
+            line: position["line"],
+            character: position["character"],
+            description: latestVersionData?.description,
+            author: latestVersionData?.author?.name || "various contributors",
+            type: "devDependency", // Mark as devDependency
+          };
+        });
+
+        // Wait for all promises to resolve
+        const allPromises = dependenciesPromises.concat(devDependenciesPromises);
+        await Promise.all(allPromises);
+
+        this.promises = allPromises;
       }
+
       // Convert the array of dependencies data to an object
       for (const promise of this.promises) {
         const dependencyData = await promise;
@@ -119,15 +146,13 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
 
       const summaryRange = new vscode.Range(0, 0, 0, 0);
       if (patches + minors + majors > 0) {
-        const summaryTitle = `Update Now: ${
-          patches + minors + majors
-        } updates available (❇️ ${patches} x patch, ✴️ ${minors} x minor, 🛑 ${majors} x major)`;
+        const summaryTitle = `Update Now: ${patches + minors + majors
+          } updates available (❇️ ${patches} x patch, ✴️ ${minors} x minor, 🛑 ${majors} x major)`;
 
         codeLenses.unshift(
           new vscode.CodeLens(summaryRange, {
             title: summaryTitle,
-            tooltip:
-              "Please be careful when updating all dependencies at once. \nMINOR ✴️ and MAJOR 🛑 updates can break your code functionality. ",
+            tooltip: "Please be careful when updating all dependencies at once. \nMINOR ✴️ and MAJOR 🛑 updates can break your code functionality. ",
             command: "update-now.showNotification",
           })
         );
@@ -158,13 +183,31 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
   }, 50);
 }
 
-// Function to update the version of a dependency in the package.json file
 async function updateDependency(documentUri: vscode.Uri, packageName: string, latestVersion: string): Promise<void> {
   const document = await vscode.workspace.openTextDocument(documentUri);
   const text = document.getText();
+  const packageJson = JSON.parse(text);
+  const currentVersion = packageJson.dependencies[packageName];
 
-  const updatedText = text.replace(new RegExp(`("${packageName}":\\s*")([^"]+)`, "g"), `$1${latestVersion}`);
+  // Check if the update is not a major update
+  const isMajorUpdate = semver.diff(latestVersion, currentVersion.replace(/^[~^]/, "")) === "major";
 
+  // Extract version prefix from the current version
+  const versionPrefix = currentVersion.match(/^[~^]/)?.[0]; // Match ^ or ~ at the start
+
+  // Construct the updated version with the same prefix as the current version (if not a major update)
+  let updatedVersion = latestVersion;
+  if (!isMajorUpdate && versionPrefix) {
+    updatedVersion = versionPrefix + updatedVersion;
+  }
+
+  // Update the dependency version in the package.json object
+  packageJson.dependencies[packageName] = updatedVersion;
+
+  // Convert the updated package.json object back to text
+  const updatedText = JSON.stringify(packageJson, null, 2);
+
+  // Create a WorkspaceEdit to replace the entire document content
   const edit = new vscode.WorkspaceEdit();
   edit.replace(document.uri, new vscode.Range(document.positionAt(0), document.positionAt(text.length)), updatedText);
 
@@ -174,6 +217,7 @@ async function updateDependency(documentUri: vscode.Uri, packageName: string, la
   // Save the document
   await document.save();
 
+  // Show a notification confirming the update
   vscode.window.showInformationMessage(`Awesome! 📦 ${packageName} has been updated to version: ${latestVersion}.`);
 }
 
@@ -197,18 +241,18 @@ async function updateAllDependencies(documentUri: vscode.Uri): Promise<void> {
   for (const packageName in dependencies) {
     const currentVersion = dependencies[packageName];
     const versionPrefix = currentVersion.match(/^[~^]/)?.[0]; // Match ^ or ~ at the start
-    const strippedCurrentVersion = currentVersion.replace(/^[~^]/, ''); // Remove ^ or ~ from the current version
+    const strippedCurrentVersion = currentVersion.replace(/^[~^]/, ""); // Remove ^ or ~ from the current version
 
     const latestVersionData = (await getLatestVersion(packageName)) as VersionInfo | null;
     if (latestVersionData && semver.valid(latestVersionData.version)) {
-      const isPatchUpdate = semver.diff(latestVersionData.version, strippedCurrentVersion) === 'patch';
-      const isMinorUpdate = semver.diff(latestVersionData.version, strippedCurrentVersion) === 'minor';
+      const isPatchUpdate = semver.diff(latestVersionData.version, strippedCurrentVersion) === "patch";
+      const isMinorUpdate = semver.diff(latestVersionData.version, strippedCurrentVersion) === "minor";
 
       let newVersion = latestVersionData.version;
-      if (versionPrefix === '~' && isPatchUpdate) {
-        newVersion = '~' + newVersion;
-      } else if (versionPrefix === '^' && (isPatchUpdate || isMinorUpdate)) {
-        newVersion = '^' + newVersion;
+      if (versionPrefix === "~" && isPatchUpdate) {
+        newVersion = "~" + newVersion;
+      } else if (versionPrefix === "^" && (isPatchUpdate || isMinorUpdate)) {
+        newVersion = "^" + newVersion;
       }
 
       if (newVersion !== currentVersion) {
@@ -221,11 +265,7 @@ async function updateAllDependencies(documentUri: vscode.Uri): Promise<void> {
   if (dependenciesToUpdate.length !== 0) {
     const updatedText = JSON.stringify(packageJson, null, 2);
     const edit = new vscode.WorkspaceEdit();
-    edit.replace(
-      document.uri,
-      new vscode.Range(document.positionAt(0), document.positionAt(document.getText().length)),
-      updatedText
-    );
+    edit.replace(document.uri, new vscode.Range(document.positionAt(0), document.positionAt(document.getText().length)), updatedText);
     await vscode.workspace.applyEdit(edit);
     await document.save();
     vscode.window.showInformationMessage("Yay! 🥳 All dependencies have been updated to their latest version.");
@@ -234,7 +274,6 @@ async function updateAllDependencies(documentUri: vscode.Uri): Promise<void> {
     return;
   }
 }
-
 
 // Extension activation function, called when the extension is activated
 export function activate(context: vscode.ExtensionContext): void {
@@ -278,4 +317,4 @@ export function activate(context: vscode.ExtensionContext): void {
 }
 
 // Extension deactivation function, called when the extension is deactivated
-export function deactivate(): void {}
+export function deactivate(): void { }
