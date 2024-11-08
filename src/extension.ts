@@ -4,6 +4,7 @@ import { getLatestVersion } from "./utils/getLatestVersion";
 import { showUpdateAllNotification } from "./commands/showUpdateAllNotification";
 import { debounce } from "./utils/debounce";
 import { getUpdateType } from "./utils/getUpdateType";
+import { getVersionPrefix } from "./utils/getVersionPrefix";
 import { VersionInfo } from "./utils/types";
 import semver from "semver";
 import { incrementUpgradeCount } from "./utils/incrementUpgradeCount";
@@ -187,7 +188,7 @@ async function updateDependency(context: vscode.ExtensionContext, documentUri: v
   }
 
   const isMajorUpdate = semver.diff(latestVersion, currentVersion.replace(/^[~^]/, "")) === "major";
-  const versionPrefix = currentVersion.match(/^[~^]/)?.[0];
+  const versionPrefix = getVersionPrefix(currentVersion);
   let updatedVersion = latestVersion;
   if (!isMajorUpdate && versionPrefix) {
     updatedVersion = versionPrefix + updatedVersion;
@@ -241,7 +242,7 @@ async function updateAllDependencies(context: vscode.ExtensionContext, documentU
 
   for (const packageName in { ...dependencies, ...devDependencies }) {
     const currentVersion = dependencies[packageName] || devDependencies[packageName];
-    const versionPrefix = currentVersion.match(/^[~^]/)?.[0];
+    const versionPrefix = getVersionPrefix(currentVersion);
     const strippedCurrentVersion = currentVersion.replace(/^[~^]/, "");
     const latestVersionData = storedDependencies[packageName] && Date.now() - storedDependencies[packageName].timestamp < ONE_DAY_IN_MS
       ? storedDependencies[packageName]
