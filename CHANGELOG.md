@@ -4,6 +4,13 @@ All notable changes to the "update-now" extension will be documented in this fil
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [0.0.8] - 2024-11-08
+
+### Added
+
+ - DevDependencies have now CodeLenses too.
+ - Latest version is saved locally to reduce the registry calls. 
+
 ## [0.0.7] - 2023-12-03
 
 ### Fixed
