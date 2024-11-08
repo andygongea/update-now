@@ -38,8 +38,6 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
 
       const storedDependencies = this.context.workspaceState.get<Record<string, DependencyData>>('dependenciesData', {});
 
-      console.log(JSON.stringify(storedDependencies, null, 2));
-
       if (Object.keys(storedDependencies).length !== 0) {
         this.dependenciesData = storedDependencies;
       }
@@ -50,6 +48,8 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
         const storedDependency = storedDependencies[packageName];
         if (!storedDependency || currentTime - storedDependency.timestamp >= ONE_DAY_IN_MS || storedDependency.version === null) {
           this.promises.push(this.updateDependencyData(document, packageName, currentVersion));
+        } else {
+          this.dependenciesData[packageName] = storedDependency;
         }
       }
 
@@ -70,15 +70,18 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
       return;
     }
 
-    const latestVersionData = (await getLatestVersion(packageName)) as VersionInfo | null;
+    // Use the updated `getLatestVersion` which now has caching logic
+    const latestVersionData = await getLatestVersion(packageName);
+    if (!latestVersionData) { return; };
+
     const position = getPosition(document, packageName);
-    const latestVersion = latestVersionData ? latestVersionData.version : null;
-    const updateType = getUpdateType(currentVersion, latestVersion!);
+    const latestVersion = latestVersionData.version;
+    const updateType = getUpdateType(currentVersion, latestVersion);
 
     this.dependenciesData[packageName] = {
       version: latestVersion,
-      description: latestVersionData?.description,
-      author: latestVersionData?.author?.name || "various contributors",
+      description: latestVersionData.description,
+      author: latestVersionData.author?.name || "various contributors",
       timestamp: Date.now(),
       updateType,
     };
@@ -90,8 +93,8 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
       update: updateType,
       line: position.line,
       character: position.character,
-      description: latestVersionData?.description,
-      author: latestVersionData?.author?.name || "various contributors",
+      description: latestVersionData.description,
+      author: latestVersionData.author?.name || "various contributors",
     };
   }
 
