@@ -3,7 +3,7 @@ import * as fs from "fs";
 import * as path from "path";
 
 const ONE_DAY_IN_MS = 24 * 60 * 60 * 1000;
-const CACHE_FILE_PATH = path.join(__dirname, "dependencyCache.json");
+const CACHE_FILE_PATH = path.join(__dirname, "ComposerJsonDependencyCache.json");
 
 interface CachedData {
   version: string;
@@ -39,18 +39,25 @@ export async function getLatestVersion(packageName: string): Promise<CachedData 
       console.log(`Using cached data for package: ${packageName}`);
       return inMemoryCache[packageName];
     } else {
-      // If the package is not cached or is outdated, fetch the latest version from NPM registry
-      const url = `https://registry.npmjs.org/${packageName}/latest`;
-      const response = await axios.get(url);
-      const latestVersionData = response.data;
+      const vendor = packageName.split("/")[0];
+      const pck = packageName.split("/")[1];
+      if (pck) {
+        const url = `https://repo.packagist.org/p2/${vendor}/${pck}.json`;
+        // If the package is not cached or is outdated, fetch the latest version from NPM registry
+        const response = await axios.get(url);
+        const latestVersionData = response.data;
 
-      // Update the in-memory cache
-      inMemoryCache[packageName] = {
-        version: latestVersionData.version,
-        description: latestVersionData.description,
-        author: latestVersionData.author,
-        timestamp: Date.now(),
-      };
+        // Update the in-memory cache
+        inMemoryCache[packageName] = {
+          version: latestVersionData.version,
+          description: latestVersionData.description,
+          author: latestVersionData.author,
+          timestamp: Date.now(),
+        };
+      } else {
+        console.log(`No package name for this vendor: ${vendor}`);
+        return null;
+      }
 
       console.log(`Fetched data from registry for package: ${packageName}`);
       return inMemoryCache[packageName];

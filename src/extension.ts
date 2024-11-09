@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
-import { isPackageJson } from "./utils/isPackageJson";
-import { getLatestVersion } from "./utils/getLatestVersion";
+import { isPackageJson } from "./envs/npm/isPackageJson";
+import { getLatestVersion } from "./envs/npm/getLatestVersion";
 import { showUpdateAllNotification } from "./commands/showUpdateAllNotification";
 import { debounce } from "./utils/debounce";
 import { getUpdateType } from "./utils/getUpdateType";
@@ -26,7 +26,7 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
   private promises: Promise<any>[] = [];
   private dependenciesData: Record<string, DependencyData> = {};
 
-  constructor(private context: vscode.ExtensionContext) {}
+  constructor(private context: vscode.ExtensionContext) { }
 
   async provideCodeLenses(document: vscode.TextDocument): Promise<vscode.CodeLens[]> {
     const codeLenses: vscode.CodeLens[] = [];
@@ -341,4 +341,4 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 }
 
-export function deactivate(): void {}
+export function deactivate(): void { }
