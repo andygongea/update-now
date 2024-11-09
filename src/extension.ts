@@ -5,19 +5,12 @@ import { showUpdateAllNotification } from "./commands/showUpdateAllNotification"
 import { debounce } from "./utils/debounce";
 import { getUpdateType } from "./utils/getUpdateType";
 import { getVersionPrefix } from "./utils/getVersionPrefix";
-import { VersionInfo } from "./utils/types";
 import semver from "semver";
 import { incrementUpgradeCount } from "./utils/incrementUpgradeCount";
+import { VersionInfo } from "./utils/types";
+import { DependencyData } from "./utils/types";
 
 const ONE_DAY_IN_MS = 24 * 60 * 60 * 1000;
-
-interface DependencyData {
-  version: string | null;
-  description?: string;
-  author?: string;
-  timestamp: number;
-  updateType?: "major" | "minor" | "patch" | "latest" | "invalid" | "invalid latest" | "url";
-}
 
 class DependencyCodeLensProvider implements vscode.CodeLensProvider {
   private _onDidChangeCodeLenses: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
@@ -26,7 +19,7 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
   private promises: Promise<any>[] = [];
   private dependenciesData: Record<string, DependencyData> = {};
 
-  constructor(private context: vscode.ExtensionContext) {}
+  constructor(private context: vscode.ExtensionContext) { }
 
   async provideCodeLenses(document: vscode.TextDocument): Promise<vscode.CodeLens[]> {
     const codeLenses: vscode.CodeLens[] = [];
@@ -341,4 +334,4 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 }
 
-export function deactivate(): void {}
+export function deactivate(): void { }
