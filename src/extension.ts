@@ -177,12 +177,15 @@ async function updateDependency(
   context: vscode.ExtensionContext,
   documentUri: vscode.Uri,
   packageName: string,
-  currentVersion: string
+  currentVersion: string,
+  suppressNotification: boolean = false
 ): Promise<void> {
   try {
     // Skip if version is invalid or a URL
     if (!currentVersion || isURL(currentVersion)) {
-      vscode.window.showWarningMessage(`Cannot update ${packageName}: invalid version format`);
+      if (!suppressNotification) {
+        vscode.window.showWarningMessage(`Cannot update ${packageName}: invalid version format`);
+      }
       return;
     }
 
@@ -197,7 +200,9 @@ async function updateDependency(
     // Get latest version data
     const latestVersionData = await getLatestVersion(packageName);
     if (!latestVersionData?.version) {
-      vscode.window.showWarningMessage(`Could not fetch latest version for ${packageName}`);
+      if (!suppressNotification) {
+        vscode.window.showWarningMessage(`Could not fetch latest version for ${packageName}`);
+      }
       return;
     }
 
@@ -207,16 +212,20 @@ async function updateDependency(
 
     // Skip if either version is invalid
     if (!semver.valid(cleanLatestVersion) || !semver.valid(cleanCurrentVersion)) {
-      vscode.window.showWarningMessage(
-        `Invalid version format for ${packageName}: current=${cleanCurrentVersion}, latest=${cleanLatestVersion}`
-      );
+      if (!suppressNotification) {
+        vscode.window.showWarningMessage(
+          `Invalid version format for ${packageName}: current=${cleanCurrentVersion}, latest=${cleanLatestVersion}`
+        );
+      }
       return;
     }
 
     try {
       const diff = semver.diff(cleanLatestVersion, cleanCurrentVersion);
       if (!diff) {
-        vscode.window.showInformationMessage(`${packageName} is already up to date`);
+        if (!suppressNotification) {
+          vscode.window.showInformationMessage(`${packageName} is already up to date`);
+        }
         return;
       }
 
@@ -258,19 +267,25 @@ async function updateDependency(
       await context.workspaceState.update('dependenciesData', storedDependencies);
       await incrementUpgradeCount(context);
 
-      vscode.window.showInformationMessage(
-        `Successfully updated ${packageName} from ${currentVersion} to ${newVersion}`
-      );
+      if (!suppressNotification) {
+        vscode.window.showInformationMessage(
+          `Successfully updated ${packageName} from ${currentVersion} to ${newVersion}`
+        );
+      }
     } catch (diffError) {
       console.error(`Error comparing versions for ${packageName}:`, diffError);
-      vscode.window.showErrorMessage(`Failed to compare versions for ${packageName}`);
+      if (!suppressNotification) {
+        vscode.window.showErrorMessage(`Failed to compare versions for ${packageName}`);
+      }
       return;
     }
   } catch (error) {
     console.error('Error in updateDependency:', error);
-    vscode.window.showErrorMessage(
-      `Failed to update ${packageName}. Check the console for details.`
-    );
+    if (!suppressNotification) {
+      vscode.window.showErrorMessage(
+        `Failed to update ${packageName}. Check the console for details.`
+      );
+    }
   }
 }
 
@@ -345,16 +360,7 @@ async function updateAllDependencies(context: vscode.ExtensionContext, documentU
 
           if (newVersion !== currentVersion) {
             dependenciesToUpdate.push(packageName);
-            if (dependencies[packageName]) {
-              packageJson.dependencies[packageName] = newVersion;
-            } else if (devDependencies[packageName]) {
-              packageJson.devDependencies[packageName] = newVersion;
-            }
-            storedDependencies[packageName] = {
-              version: newVersion,
-              timestamp: Date.now(),
-              updateType: UpdateType.latest,
-            };
+            await updateDependency(context, documentUri, packageName, currentVersion, true); // Suppress notifications
           }
         } catch (diffError) {
           console.warn(`Error comparing versions for ${packageName}:`, diffError);
@@ -367,19 +373,6 @@ async function updateAllDependencies(context: vscode.ExtensionContext, documentU
     }
 
     if (dependenciesToUpdate.length !== 0) {
-      const updatedText = JSON.stringify(packageJson, null, 2);
-      const edit = new vscode.WorkspaceEdit();
-      edit.replace(
-        document.uri,
-        new vscode.Range(document.positionAt(0), document.positionAt(document.getText().length)),
-        updatedText
-      );
-      await vscode.workspace.applyEdit(edit);
-      await document.save();
-
-      await context.workspaceState.update('dependenciesData', storedDependencies);
-      await incrementUpgradeCount(context);
-
       vscode.window.showInformationMessage("Yay! 🥳 All dependencies have been updated to their latest version.");
     } else {
       vscode.window.showInformationMessage("All dependencies are up to date.");
