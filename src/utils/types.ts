@@ -1,3 +1,13 @@
+export enum UpdateType {
+  major = "major",
+  minor = "minor",
+  patch = "patch",
+  latest = "latest",
+  invalid = "invalid",
+  invalidLatest = "invalid latest",
+  url = "url"
+}
+
 export type VersionInfo = {
   version: string;
   description: string;
@@ -10,5 +20,5 @@ export interface DependencyData {
   description?: string;
   author?: string;
   timestamp: number;
-  updateType?: "major" | "minor" | "patch" | "latest" | "invalid" | "invalid latest" | "url";
+  updateType?: UpdateType;
 }
