@@ -73,7 +73,7 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
 
     // Use the updated `getLatestVersion` which now has caching logic
     const latestVersionData = await getLatestVersion(packageName);
-    if (!latestVersionData) { return; };
+    if (!latestVersionData) { return; }
 
     const position = getPosition(document, packageName);
     const latestVersion = latestVersionData.version;
@@ -143,7 +143,7 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
             title,
             tooltip,
             command: "update-now.updateDependency",
-            arguments: [document.uri, packageName, latestVersion],
+            arguments: [document.uri, packageName, currentVersion],
           })
         );
       }
@@ -412,8 +412,8 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(processingStatusBarItem);
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("update-now.updateDependency", async (documentUri, packageName, latestVersion) => {
-      await updateDependency(context, documentUri, packageName, latestVersion);
+    vscode.commands.registerCommand("update-now.updateDependency", async (documentUri, packageName, currentVersion) => {
+      await updateDependency(context, documentUri, packageName, currentVersion);
     })
   );
 

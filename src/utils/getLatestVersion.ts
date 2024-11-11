@@ -53,7 +53,7 @@ export async function getLatestVersion(packageName: string): Promise<CachedData 
         timestamp: Date.now(),
       };
 
-      console.log(`Fetched data from registry for package: ${packageName}`);
+      console.log(`${Date.now()} - Fetched data from registry for package: ${packageName}`);
       return inMemoryCache[packageName];
     }
   } catch (error) {
