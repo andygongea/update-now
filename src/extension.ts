@@ -3,7 +3,7 @@ import semver from "semver";
 import { VersionInfo } from "./utils/types";
 import { DependencyData } from "./utils/types";
 import { UpdateType } from './utils/types';
-import { isPackageJson } from "./utils/isPackageJson";
+import { isPackageJson } from "./envs/npm/isPackageJson";
 import { getLatestVersion } from "./utils/getLatestVersion";
 import { showUpdateAllNotification } from "./commands/showUpdateAllNotification";
 import { getUpdateType } from "./utils/getUpdateType";
