@@ -12,6 +12,10 @@ import { debounce } from "./utils/debounce";
 
 const ONE_DAY_IN_MS = 24 * 60 * 60 * 1000;
 
+// Global variable for the status bar item
+let processingStatusBarItem: any;
+
+
 class DependencyCodeLensProvider implements vscode.CodeLensProvider {
   private _onDidChangeCodeLenses: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
   public readonly onDidChangeCodeLenses: vscode.Event<void> = this._onDidChangeCodeLenses.event;
@@ -23,6 +27,8 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
 
   async provideCodeLenses(document: vscode.TextDocument): Promise<vscode.CodeLens[]> {
     const codeLenses: vscode.CodeLens[] = [];
+
+    showProcessingStatus(`analyzing dependencies...`, true);
 
     if (isPackageJson(document)) {
       const packageJson = JSON.parse(document.getText());
@@ -53,6 +59,8 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
 
       this.addCodeLenses(codeLenses, document);
     }
+
+    showProcessingStatus(`analysis complete.`, false);
 
     return codeLenses;
   }
@@ -188,6 +196,9 @@ async function updateDependency(
       return;
     }
 
+    showProcessingStatus(`updating ${packageName}...`, true);
+
+
     const document = await vscode.workspace.openTextDocument(documentUri);
     const packageJson = JSON.parse(document.getText());
     const dependencies = packageJson.dependencies || {};
@@ -255,6 +266,9 @@ async function updateDependency(
 
       await vscode.workspace.applyEdit(edit);
       await document.save();
+
+      showProcessingStatus(`${packageName} updated`, false);
+
 
       // Update stored dependencies data
       const storedDependencies = context.workspaceState.get<Record<string, DependencyData>>('dependenciesData', {});
@@ -393,6 +407,10 @@ function isURL(version: string): boolean {
 export function activate(context: vscode.ExtensionContext): void {
   context.globalState.update("dependencyUpgradeCount", 0);
 
+  // Create a status bar item
+  processingStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 10);
+  context.subscriptions.push(processingStatusBarItem);
+
   context.subscriptions.push(
     vscode.commands.registerCommand("update-now.updateDependency", async (documentUri, packageName, latestVersion) => {
       await updateDependency(context, documentUri, packageName, latestVersion);
@@ -432,6 +450,21 @@ export function activate(context: vscode.ExtensionContext): void {
       }
     })
   );
+}
+
+// Function to show processing status
+function showProcessingStatus(message: any, loading: boolean) {
+  if (loading) {
+    processingStatusBarItem.text = `$(arrow-up) Update Now: $(sync~spin) ${message}`;
+  } else {
+    processingStatusBarItem.text = `$(arrow-up) Update Now: ${message}`;
+  }
+  processingStatusBarItem.show();
+}
+
+// Function to hide processing status
+function hideProcessingStatus() {
+  processingStatusBarItem.hide();
 }
 
 export function deactivate(): void { }

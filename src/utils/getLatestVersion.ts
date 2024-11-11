@@ -3,7 +3,7 @@ import * as fs from "fs";
 import * as path from "path";
 
 const ONE_DAY_IN_MS = 24 * 60 * 60 * 1000;
-const CACHE_FILE_PATH = path.join(__dirname, "dependencyCache.json");
+const CACHE_FILE_PATH = path.join(__dirname, "dependenciesCacheNPM.json");
 
 interface CachedData {
   version: string;
@@ -26,6 +26,7 @@ function loadCache() {
 
 // Save the in-memory cache to file
 function saveCache() {
+  console.log(`Saving cache to file: ${CACHE_FILE_PATH}`);
   fs.writeFileSync(CACHE_FILE_PATH, JSON.stringify(inMemoryCache, null, 2), "utf8");
 }
 
@@ -36,7 +37,7 @@ export async function getLatestVersion(packageName: string): Promise<CachedData 
   try {
     // Check if the package is already cached and if the cached version is recent
     if (inMemoryCache[packageName] && Date.now() - inMemoryCache[packageName].timestamp < ONE_DAY_IN_MS) {
-      console.log(`Using cached data for package: ${packageName}`);
+      console.log(`Using cached data for package: ${JSON.stringify(inMemoryCache[packageName])}`);
       return inMemoryCache[packageName];
     } else {
       // If the package is not cached or is outdated, fetch the latest version from NPM registry
