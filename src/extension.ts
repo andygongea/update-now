@@ -3,6 +3,7 @@ import semver from "semver";
 import { DependencyData } from "./utils/types";
 import { UpdateType } from './utils/types';
 import { isPackageJson } from "./envs/npm/isPackageJson";
+import { getPosition } from "./utils/getPosition";
 import { getLatestVersion } from "./utils/getLatestVersion";
 import { showUpdateAllNotification } from "./commands/showUpdateAllNotification";
 import { getUpdateType } from "./utils/getUpdateType";
@@ -302,17 +303,6 @@ async function updateDependency(
   }
 }
 
-function getPosition(document: vscode.TextDocument, packageName: string) {
-  const regex = new RegExp(`"${packageName}"\\s*:`);
-  const line = document
-    .getText()
-    .split("\n")
-    .findIndex((line) => regex.test(line));
-  const character = document.lineAt(line).text.indexOf(`"${packageName}":`);
-
-  return { line, character };
-}
-
 async function updateAllDependencies(context: vscode.ExtensionContext, documentUri: vscode.Uri): Promise<void> {
   try {
     const document = await vscode.workspace.openTextDocument(documentUri);
@@ -388,7 +378,7 @@ async function updateAllDependencies(context: vscode.ExtensionContext, documentU
     if (dependenciesToUpdate.length !== 0) {
       vscode.window.showInformationMessage("Yay! 🥳 All dependencies have been updated to their latest version.");
     } else {
-      vscode.window.showInformationMessage("All dependencies are up to date.");
+      vscode.window.showInformationMessage("🙌 All dependencies are up to date.");
     }
   } catch (error) {
     console.error('Error in updateAllDependencies:', error);
@@ -455,9 +445,9 @@ export function activate(context: vscode.ExtensionContext): void {
 // Function to show processing status
 function showProcessingStatus(message: any, loading: boolean) {
   if (loading) {
-    processingStatusBarItem.text = `$(arrow-up) Update Now: $(sync~spin) ${message}`;
+    processingStatusBarItem.text = `⇪ Update Now: $(sync~spin) ${message}`;
   } else {
-    processingStatusBarItem.text = `$(arrow-up) Update Now: ${message}`;
+    processingStatusBarItem.text = `⇪ Update Now: ${message}`;
   }
   processingStatusBarItem.show();
 }
