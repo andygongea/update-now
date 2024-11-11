@@ -16,6 +16,9 @@ const ONE_DAY_IN_MS = 24 * 60 * 60 * 1000;
 // Global variable for the status bar item
 let processingStatusBarItem: any;
 
+function cleanVersion(version: string): string {
+  return version.trim().replace(/^v/, '');
+}
 
 class DependencyCodeLensProvider implements vscode.CodeLensProvider {
   private _onDidChangeCodeLenses: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
@@ -218,8 +221,8 @@ async function updateDependency(
     }
 
     // Validate versions before comparison
-    const cleanLatestVersion = latestVersionData.version.trim().replace(/^v/, '');
-    const cleanCurrentVersion = strippedCurrentVersion.trim().replace(/^v/, '');
+    const cleanLatestVersion = cleanVersion(latestVersionData.version);
+    const cleanCurrentVersion = cleanVersion(strippedCurrentVersion);
 
     // Skip if either version is invalid
     if (!semver.valid(cleanLatestVersion) || !semver.valid(cleanCurrentVersion)) {
@@ -336,8 +339,8 @@ async function updateAllDependencies(context: vscode.ExtensionContext, documentU
         }
 
         // Validate versions before comparison
-        const cleanLatestVersion = latestVersionData.version.trim().replace(/^v/, '');
-        const cleanCurrentVersion = strippedCurrentVersion.trim().replace(/^v/, '');
+        const cleanLatestVersion = cleanVersion(latestVersionData.version);
+        const cleanCurrentVersion = cleanVersion(strippedCurrentVersion);
 
         // Skip if either version is invalid
         if (!semver.valid(cleanLatestVersion) || !semver.valid(cleanCurrentVersion)) {
@@ -450,11 +453,6 @@ function showProcessingStatus(message: any, loading: boolean) {
     processingStatusBarItem.text = `⇪ Update Now: ${message}`;
   }
   processingStatusBarItem.show();
-}
-
-// Function to hide processing status
-function hideProcessingStatus() {
-  processingStatusBarItem.hide();
 }
 
 export function deactivate(): void { }

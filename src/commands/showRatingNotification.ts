@@ -3,7 +3,7 @@ import * as vscode from "vscode";
 export async function showRatingNotification() {
   const rateButton = "Rate this extension";
   const cancelButton = "Cancel";
-  const message = 'Show your love for Update Now extension by rating it! ⭐⭐⭐⭐⭐';
+  const message = `🙌 AMAZING, you are updating dependencies like a pro! Share your love for Update Now extension! ⭐⭐⭐⭐⭐`;
 
   const result = await vscode.window.showInformationMessage(
     message,

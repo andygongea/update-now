@@ -5,7 +5,7 @@ export async function incrementUpgradeCount(context: vscode.ExtensionContext): P
   const upgradeCountKey = "dependencyUpgradeCount";
   const count = (context.globalState.get<number>(upgradeCountKey) || 0) + 1;
   await context.globalState.update(upgradeCountKey, count);
-  if (count === 5) {
-    setTimeout(showRatingNotification, 2000);
+  if (count === 8) {
+    setTimeout(showRatingNotification, 2500);
   }
 }
