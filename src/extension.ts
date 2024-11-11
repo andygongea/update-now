@@ -1,6 +1,5 @@
 import * as vscode from "vscode";
 import semver from "semver";
-import { VersionInfo } from "./utils/types";
 import { DependencyData } from "./utils/types";
 import { UpdateType } from './utils/types';
 import { isPackageJson } from "./envs/npm/isPackageJson";
