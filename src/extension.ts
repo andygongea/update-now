@@ -32,22 +32,19 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
 
     showProcessingStatus(`analyzing dependencies...`, true);
     if (isPackageJson(document)) {
+      // Parse the package.json file
       const packageJson = JSON.parse(document.getText());
+      // Get the dependencies and devDependencies from the package.json file
       const dependencies = packageJson.dependencies || {};
       const devDependencies = packageJson.devDependencies || {};
 
-      // Get the stored dependencies from the global state
       const storedDependencies = this.context.workspaceState.get<Record<string, DependencyData>>('dependenciesData', {});
 
-      // If there are stored dependencies, use them
       if (Object.keys(storedDependencies).length !== 0) {
         this.dependenciesData = storedDependencies;
       }
 
-      // Get the current time
       const currentTime = Date.now();
-
-      // Loop through the dependencies and devDependencies
       for (const packageName in { ...dependencies, ...devDependencies }) {
         const currentVersion = dependencies[packageName] || devDependencies[packageName];
         const storedDependency = storedDependencies[packageName];
@@ -58,13 +55,11 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
         }
       }
 
-      // If there are promises, wait for them to resolve
       if (this.promises.length > 0) {
         await Promise.all(this.promises);
         await this.context.workspaceState.update('dependenciesData', this.dependenciesData);
       }
 
-      // Add the code lenses to the code lenses array
       this.addCodeLenses(codeLenses, document);
     }
 
@@ -128,7 +123,7 @@ async function updateDependency(
   suppressNotification: boolean = false
 ): Promise<void> {
   try {
-    if (!currentVersion) {
+    if (!currentVersion || isURL(currentVersion)) {
       if (!suppressNotification) {
         vscode.window.showWarningMessage(`Cannot update ${packageName}: invalid version format`);
       }
