@@ -68,3 +68,5 @@ process.on("SIGINT", () => {
   saveCache();
   process.exit();
 });
+
+export { inMemoryCache };

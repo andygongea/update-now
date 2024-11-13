@@ -4,7 +4,7 @@ import { DependencyData, UpdateType } from "./utils/types";
 import { isURL, cleanVersion } from "./utils/helpers";
 import { isPackageJson } from "./envs/npm/isPackageJson";
 import { getPosition } from "./envs/npm/getPosition";
-import { getLatestVersion } from "./utils/getLatestVersion";
+import { getLatestVersion, inMemoryCache } from "./utils/getLatestVersion";
 import { showUpdateAllNotification } from "./commands/showUpdateAllNotification";
 import { getUpdateType } from "./core/getUpdateType";
 import { getVersionPrefix } from "./utils/getVersionPrefix";
@@ -38,10 +38,10 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
       const dependencies = packageJson.dependencies || {};
       const devDependencies = packageJson.devDependencies || {};
 
-      const storedDependencies = this.context.workspaceState.get<Record<string, DependencyData>>('dependenciesData', {});
+      const storedDependencies = inMemoryCache;
 
       if (Object.keys(storedDependencies).length !== 0) {
-        this.dependenciesData = storedDependencies;
+        this.dependenciesData = storedDependencies as Record<string, DependencyData>;
       }
 
       const currentTime = Date.now();
@@ -51,7 +51,7 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
         if (!storedDependency || currentTime - storedDependency.timestamp >= ONE_DAY_IN_MS || storedDependency.version === null) {
           this.promises.push(this.updateDependencyData(document, packageName, currentVersion));
         } else {
-          this.dependenciesData[packageName] = storedDependency;
+          this.dependenciesData[packageName] = storedDependency as DependencyData;
         }
       }
 
@@ -227,7 +227,7 @@ async function updateAllDependencies(context: vscode.ExtensionContext, documentU
     const devDependencies = packageJson.devDependencies || {};
     const dependenciesToUpdate: string[] = [];
 
-    const storedDependencies = context.workspaceState.get<Record<string, DependencyData>>('dependenciesData', {});
+    const storedDependencies = inMemoryCache;
 
     for (const packageName in { ...dependencies, ...devDependencies }) {
       try {
