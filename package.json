@@ -67,15 +67,13 @@
   },
   "devDependencies": {
     "@types/glob": "^8.1.0",
-    "@types/mocha": "^10.0.4",
     "@types/node": "16.18.60",
     "@types/vscode": "^1.77.0",
-    "@typescript-eslint/eslint-plugin": "^6.11.0",
-    "@typescript-eslint/parser": "^6.11.0",
-    "@vscode/test-electron": "^2.3.6",
-    "eslint": "^8.54.0",
-    "glob": "^10.3.10",
-    "mocha": "^10.2.0",
+    "@typescript-eslint/eslint-plugin": "8.14.0",
+    "@typescript-eslint/parser": "8.14.0",
+    "@vscode/test-electron": "^2.4.1",
+    "eslint": "8.57.1",
+    "glob": "11.0.0",
     "typescript": "^5.2.2"
   },
   "dependencies": {
