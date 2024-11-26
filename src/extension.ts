@@ -5,19 +5,13 @@ import { showUpdateAllNotification } from "./commands/showUpdateAllNotification"
 import { debounce } from "./utils/debounce";
 import { getUpdateType } from "./utils/getUpdateType";
 import { getVersionPrefix } from "./utils/getVersionPrefix";
-import { VersionInfo } from "./utils/types";
+import { VersionInfo, DependencyData, UpdateType } from "./utils/types";
 import semver from "semver";
 import { incrementUpgradeCount } from "./utils/incrementUpgradeCount";
 
 const ONE_DAY_IN_MS = 24 * 60 * 60 * 1000;
 
-interface DependencyData {
-  version: string | null;
-  description?: string;
-  author?: string;
-  timestamp: number;
-  updateType?: "major" | "minor" | "patch" | "latest" | "invalid" | "invalid latest" | "url";
-}
+
 
 class DependencyCodeLensProvider implements vscode.CodeLensProvider {
   private _onDidChangeCodeLenses: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
@@ -26,7 +20,7 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
   private promises: Promise<any>[] = [];
   private dependenciesData: Record<string, DependencyData> = {};
 
-  constructor(private context: vscode.ExtensionContext) {}
+  constructor(private context: vscode.ExtensionContext) { }
 
   async provideCodeLenses(document: vscode.TextDocument): Promise<vscode.CodeLens[]> {
     const codeLenses: vscode.CodeLens[] = [];
@@ -83,7 +77,7 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
       description: latestVersionData.description,
       author: latestVersionData.author?.name || "various contributors",
       timestamp: Date.now(),
-      updateType,
+      updateType: updateType as UpdateType,
     };
 
     return {
@@ -214,7 +208,7 @@ async function updateDependency(context: vscode.ExtensionContext, documentUri: v
     ...storedDependencies[packageName],
     version: latestVersion,
     timestamp: Date.now(),
-    updateType: "latest",
+    updateType: UpdateType.latest,
   };
   await context.workspaceState.update('dependenciesData', storedDependencies);
 
@@ -275,7 +269,7 @@ async function updateAllDependencies(context: vscode.ExtensionContext, documentU
         storedDependencies[packageName] = {
           version: newVersion,
           timestamp: Date.now(),
-          updateType: "latest",
+          updateType: UpdateType.latest,
         };
       }
     }
@@ -341,4 +335,4 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 }
 
-export function deactivate(): void {}
+export function deactivate(): void { }
