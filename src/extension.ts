@@ -8,10 +8,9 @@ import { getVersionPrefix } from "./utils/getVersionPrefix";
 import { VersionInfo, DependencyData, UpdateType } from "./utils/types";
 import semver from "semver";
 import { incrementUpgradeCount } from "./utils/incrementUpgradeCount";
+import { getPosition } from "./utils/getPosition";
 
 const ONE_DAY_IN_MS = 24 * 60 * 60 * 1000;
-
-
 
 class DependencyCodeLensProvider implements vscode.CodeLensProvider {
   private _onDidChangeCodeLenses: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
@@ -215,17 +214,6 @@ async function updateDependency(context: vscode.ExtensionContext, documentUri: v
   await incrementUpgradeCount(context);
 
   vscode.window.showInformationMessage(`Awesome! 📦 ${packageName} has been updated to version: ${latestVersion}.`);
-}
-
-function getPosition(document: vscode.TextDocument, packageName: string) {
-  const regex = new RegExp(`"${packageName}"\\s*:`);
-  const line = document
-    .getText()
-    .split("\n")
-    .findIndex((line) => regex.test(line));
-  const character = document.lineAt(line).text.indexOf(`"${packageName}":`);
-
-  return { line, character };
 }
 
 async function updateAllDependencies(context: vscode.ExtensionContext, documentUri: vscode.Uri): Promise<void> {
