@@ -63,7 +63,6 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
       return;
     }
 
-    // Use the updated `getLatestVersion` which now has caching logic
     const latestVersionData = await getLatestVersion(packageName);
     if (!latestVersionData) { return; };
 
