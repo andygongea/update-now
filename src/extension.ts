@@ -42,7 +42,14 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
         if (!storedDependency || currentTime - storedDependency.timestamp >= ONE_DAY_IN_MS || storedDependency.version === null) {
           this.promises.push(this.updateDependencyData(document, packageName, currentVersion));
         } else {
-          this.dependenciesData[packageName] = storedDependency;
+          // Recalculate update type since package.json version might have changed
+          this.dependenciesData[packageName] = {
+            ...storedDependency,
+            updateType: getUpdateType(currentVersion, storedDependency.version) as UpdateType
+          };
+
+          console.log(packageName + ": " + JSON.stringify(storedDependencies[packageName], null, 2));
+          console.log(packageName + ": " + JSON.stringify(this.dependenciesData[packageName], null, 2));
         }
       }
 
