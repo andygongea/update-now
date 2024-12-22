@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 type UpdateType = 'patch' | 'minor' | 'major' | 'latest';
 
 export class CacheViewProvider implements vscode.WebviewViewProvider {
-    public static readonly viewType = 'dependenciesCache';
+    public static readonly viewType = 'dependenciesData';
 
     constructor(
         private readonly _extensionUri: vscode.Uri,
@@ -83,7 +83,7 @@ export class CacheViewProvider implements vscode.WebviewViewProvider {
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Dependencies Cache</title>
+            <title>Dependencies Data</title>
             <style>
                 :root { font-size: 10px; --vscode-font-family: -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif; }
                 body { padding: 20px; color: var(--vscode-foreground); font-size: 1.3rem; font-family: var(--vscode-font-family); }
@@ -132,7 +132,7 @@ export class CacheViewProvider implements vscode.WebviewViewProvider {
             </style>
         </head>
         <body>
-            <p class="dimmed">Update Now Analytics (performed updates)</p>
+            <p class="dimmed">Statistics (performed updates)</p>
             <div class="upn-analytics">
                 <div class="upn-patches upn-stat">
                     <h2 class="value upn-stat-patches">0</h2>
@@ -210,7 +210,7 @@ export class CacheViewProvider implements vscode.WebviewViewProvider {
                         timestamp.textContent = 'Last updated: ' + data.timestamp;
                         
                         const totalCount = Object.keys(data.dependencies).length;
-                        document.querySelector('.upn-title').textContent = 'Dependencies Cache (' + totalCount + ')';
+                        document.querySelector('.upn-title').textContent = 'Dependencies Data (' + totalCount + ')';
                         
                         const groups = { patch: [], minor: [], major: [], latest: []};
 

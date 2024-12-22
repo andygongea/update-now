@@ -43,7 +43,7 @@
       },
       {
         "command": "update-now.showCacheView",
-        "title": "Show Dependencies Cache",
+        "title": "Show Dependencies Data",
         "category": "🚀 Update Now"
       }
     ],
@@ -59,8 +59,8 @@
     "views": {
       "update-now-cache": [
         {
-          "id": "dependenciesCache",
-          "name": "Dependencies Cache",
+          "id": "dependenciesData",
+          "name": "Dependencies Data",
           "type": "webview"
         }
       ]
