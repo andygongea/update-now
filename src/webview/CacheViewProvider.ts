@@ -31,6 +31,13 @@ export class CacheViewProvider implements vscode.WebviewViewProvider {
             }
         });
 
+        // Handle visibility changes
+        webviewView.onDidChangeVisibility(() => {
+            if (webviewView.visible) {
+                this._updateContent(webviewView.webview);
+            }
+        });
+
         // Initial content update
         this._updateContent(webviewView.webview);
     }
@@ -78,10 +85,11 @@ export class CacheViewProvider implements vscode.WebviewViewProvider {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Dependencies Cache</title>
             <style>
-                body { padding: 20px; color: var(--vscode-foreground); font-family: var(--vscode-font-family); }
-                p { margin: 0; font-size: 13px; line-height: 1.45; }
+                :root { font-size: 10px; --vscode-font-family: -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif; }
+                body { padding: 20px; color: var(--vscode-foreground); font-size: 1.3rem; font-family: var(--vscode-font-family); }
+                p { margin: 0; line-height: 1.45; }
                 .dimmed { color: var(--vscode-descriptionForeground); }
-                .update-type { display: inline-block; padding: 4px 8px 5px; border-radius: 12px; font-size: 12px; font-weight: 600; line-height: 1; text-transform: uppercase; letter-spacing: 1px; color: color: var(--vscode-foreground);; border: 1px solid var(--vscode-panel-border); }
+                .update-type { display: inline-block; padding: 4px 8px 5px; border-radius: 12px; font-size: 1.2rem; font-weight: 600; line-height: 1; text-transform: uppercase; letter-spacing: 1px; color: color: var(--vscode-foreground);; border: 1px solid var(--vscode-panel-border); }
                 .update-type.patch { color: var(--vscode-minimapGutter-addedBackground); }
                 .update-type.patch::before { content:"❇️ Patch" }
                 .update-type.minor { color: var(--vscode-editorWarning-foreground); }
@@ -95,17 +103,19 @@ export class CacheViewProvider implements vscode.WebviewViewProvider {
                 .dependency-item:last-of-type { border-radius: 0 0 4px 4px; margin-bottom: 16px; }
                 .dependency-item strong { font-weight: 600; }
 
-                .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+                .footer { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
                 .refresh-btn { padding: 4px 12px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 4px; cursor: pointer; }
                 .refresh-btn:hover { background: var(--vscode-button-hoverBackground); }
-                .timestamp { font-size: 0.9em; color: var(--vscode-descriptionForeground); }
-
-                .group-title { font-size: 14px; font-weight: 600; margin: 0 0 4px 0; padding: 8px 0; background: var(--vscode-editor-lineHighlightBackground); border-radius: 4px; }
-
-                .upn-analytics { display: flex; justify-content: space-between; margin-bottom: 15px; }
-                .upn-stat { display: flex; flex:1; margin:8px; flex-direction: column; align-items: center; border:1px solid var(--vscode-panel-border); border-radius: 4px; padding: 10px; }
-                .upn-analytics .label { font-size: 0.9em; color: var(--vscode-descriptionForeground); }
-                .upn-analytics .value { font-size: 1.1em; font-weight: 600; }
+                
+                .group-title { font-size: 1.4rem; font-weight: 600; margin: 0 0 4px 0; padding: 8px 0; background: var(--vscode-editor-lineHighlightBackground); border-radius: 4px; }
+                
+                .upn-analytics { display: flex; justify-content: space-between; gap: 1rem; margin-bottom: 15px; }
+                .upn-stat { display: flex; flex:1; margin:8px 0; flex-direction: column; align-items: center; border:1px solid var(--vscode-panel-border); border-radius: 4px; padding: 10px; background-color: var(--vscode-editor-background); }
+                .upn-analytics .label { font-size: 1.2rem; color: var(--vscode-descriptionForeground); }
+                .upn-analytics .value { margin: 1rem 0; font-size: 2rem; font-weight: 600; }
+                
+                .upn-title { font-size: 1.6rem; font-weight: 600; margin: 0 0 4px 0; }
+                .timestamp { font-size: 1.1rem; color: var(--vscode-descriptionForeground); }
 
                 .upn-tab {  }
                 .upn-tab-header { display: flex; border-bottom: 1px solid var(--vscode-panel-border); }
@@ -115,35 +125,33 @@ export class CacheViewProvider implements vscode.WebviewViewProvider {
                 .upn-tab-content { flex: 1; padding: 16px 0; display: none; }
                 .upn-tab-content.is-active { display: block; }
 
-                .history-item { margin-bottom: 8px; padding: 10px; border: 1px solid var(--vscode-panel-border); border-radius: 4px; }
-                .history-item .timestamp { font-size: 0.85em; margin-top: 4px; }
+                .history-item p { display: flex; border-bottom: }
+                .history-item .update-type { margin-left: auto;  }
+
+                .upn-stat-count { padding:2px 4px; background: var(--vscode-editor-background); border-radius: 4px; font-size:1.1rem; font-style: normal; border: 1px solid var(--vscode-panel-border); }
             </style>
         </head>
         <body>
-            <div class="header">
-                <h3 class="un-title">Dependencies Cache (0)</h3>
-                <button class="refresh-btn">Refresh</button>
-            </div>
-            <p>Update Now Analytics (performed updates)</p>
+            <p class="dimmed">Update Now Analytics (performed updates)</p>
             <div class="upn-analytics">
                 <div class="upn-patches upn-stat">
-                    <h3 class="value upn-stat-patches">0</h3>
+                    <h2 class="value upn-stat-patches">0</h2>
                     <span class="label">❇️ Patch updates</span>
                 </div>
                 <div class="upn-minor upn-stat">
-                    <h3 class="value upn-stat-minor">0</h3>
+                    <h2 class="value upn-stat-minor">0</h2>
                     <span class="label">✴️ Minor updates</span>
                 </div>
                 <div class="upn-major upn-stat">
-                    <h3 class="value upn-stat-major">0</h3>
+                    <h2 class="value upn-stat-major">0</h2>
                     <span class="label">🛑 Major updates</span>
                 </div>
             </div>
             <div class="upn-tab">
                 <div class="upn-tab-header">
-                    <span class="upn-tab-item is-active">To update</span>
-                    <span class="upn-tab-item">Latest versions</span>
-                    <span class="upn-tab-item">History</span>
+                    <span class="upn-tab-item is-active">To update <i class="upn-stat-count">0</i></span>
+                    <span class="upn-tab-item">Latest versions <i class="upn-stat-count">0</i></span>
+                    <span class="upn-tab-item">History <i class="upn-stat-count">0</i></span>
                 </div>
                 <div class="upn-tab-contents">
                     <div id="availabe-updates" class="upn-tab-content is-active"></div>
@@ -151,7 +159,9 @@ export class CacheViewProvider implements vscode.WebviewViewProvider {
                     <div id="historic-updates" class="upn-tab-content"></div>
                 </div>
             </div>
-            <div id="content">
+            <div class="footer">
+                <h3 class="upn-title">Cached Dependencies (0)</h3>
+                <button class="refresh-btn">Refresh</button>
             </div>
             <div class="timestamp"></div>
 
@@ -200,7 +210,7 @@ export class CacheViewProvider implements vscode.WebviewViewProvider {
                         timestamp.textContent = 'Last updated: ' + data.timestamp;
                         
                         const totalCount = Object.keys(data.dependencies).length;
-                        document.querySelector('.un-title').textContent = 'Dependencies Cache (' + totalCount + ')';
+                        document.querySelector('.upn-title').textContent = 'Dependencies Cache (' + totalCount + ')';
                         
                         const groups = { patch: [], minor: [], major: [], latest: []};
 
@@ -208,6 +218,22 @@ export class CacheViewProvider implements vscode.WebviewViewProvider {
                         Object.entries(data.dependencies).forEach(([name, info]) => {
                             if (info.updateType in groups) {
                                 groups[info.updateType].push({ name, ...info });
+                            }
+                        });
+
+                        // Update tab counts
+                        const toUpdateCount = groups.patch.length + groups.minor.length + groups.major.length;
+                        const latestCount = groups.latest.length;
+                        const historyCount = data.trackUpdate ? data.trackUpdate.length : 0;
+
+                        document.querySelectorAll('.upn-tab-item').forEach((tab, index) => {
+                            const count = tab.querySelector('.upn-stat-count');
+                            if (count) {
+                                switch(index) {
+                                    case 0: count.textContent = toUpdateCount.toString(); break;
+                                    case 1: count.textContent = latestCount.toString(); break;
+                                    case 2: count.textContent = historyCount.toString(); break;
+                                }
                             }
                         });
 
@@ -277,14 +303,16 @@ export class CacheViewProvider implements vscode.WebviewViewProvider {
                                 .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
                                 .forEach(update => {
                                     const div = document.createElement('div');
-                                    div.className = 'history-item';
+                                    div.className = 'dependency-item history-item';
                                     div.innerHTML = 
                                         '<p>' +
+                                        '<span class="update">' +
                                         '<strong>📦 ' + update.packageName + '</strong> ' +
                                         '<span class="dimmed">from</span> ' +
                                         '<strong>' + update.currentVersion + '</strong> ' +
                                         '<span class="dimmed">to</span> ' +
                                         '<strong>' + update.latestVersion + '</strong> ' +
+                                        '</span>' +
                                         '<span class="update-type ' + update.updateType.toLowerCase() + '"></span>' +
                                         '</p>' +
                                         '<p class="timestamp dimmed">' + new Date(update.timestamp).toLocaleString() + '</p>';

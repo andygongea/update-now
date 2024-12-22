@@ -238,6 +238,11 @@ async function updateDependency(this: any, context: vscode.ExtensionContext, doc
     }
   ]);
 
+  // Refresh the cache webview
+  if (cacheViewProvider) {
+    await vscode.commands.executeCommand('update-now.showCacheView');
+  }
+
   vscode.window.showInformationMessage(`Awesome! 📦 ${packageName} has been updated to version: ${latestVersion}.`);
 }
 
@@ -304,11 +309,13 @@ async function updateAllDependencies(context: vscode.ExtensionContext, documentU
   }
 }
 
+let cacheViewProvider: CacheViewProvider;
+
 export function activate(context: vscode.ExtensionContext): void {
   context.globalState.update("dependencyUpgradeCount", 0);
 
   const provider = new DependencyCodeLensProvider(context);
-  const cacheViewProvider = new CacheViewProvider(context.extensionUri, context);
+  cacheViewProvider = new CacheViewProvider(context.extensionUri, context);
 
   context.subscriptions.push(
     vscode.languages.registerCodeLensProvider({ language: 'json', pattern: '**/package.json' }, provider),
@@ -327,6 +334,9 @@ export function activate(context: vscode.ExtensionContext): void {
       if (editor && isPackageJson(editor.document)) {
         showUpdateAllNotification();
       }
+    }),
+    vscode.commands.registerCommand("update-now.showCacheView", () => {
+      vscode.commands.executeCommand('workbench.view.update-now-cache');
     })
   );
 
