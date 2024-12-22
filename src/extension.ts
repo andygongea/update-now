@@ -179,7 +179,7 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
   }, 50);
 }
 
-async function updateDependency(context: vscode.ExtensionContext, documentUri: vscode.Uri, packageName: string, latestVersion: string): Promise<void> {
+async function updateDependency(this: any, context: vscode.ExtensionContext, documentUri: vscode.Uri, packageName: string, latestVersion: string): Promise<void> {
   const document = await vscode.workspace.openTextDocument(documentUri);
   const text = document.getText();
   const packageJson = JSON.parse(text);
@@ -221,6 +221,14 @@ async function updateDependency(context: vscode.ExtensionContext, documentUri: v
   await incrementUpgradeCount(context);
 
   vscode.window.showInformationMessage(`Awesome! 📦 ${packageName} has been updated to version: ${latestVersion}.`);
+
+  const trackUpdate = await this.context.workspaceState.update('trackUpdate', {
+    packageName,
+    currentVersion,
+    latestVersion,
+    updateType: getUpdateType(currentVersion, latestVersion),
+    timestamp: Date.now()
+  })
 }
 
 async function updateAllDependencies(context: vscode.ExtensionContext, documentUri: vscode.Uri): Promise<void> {

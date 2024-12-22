@@ -54,78 +54,53 @@ export class CacheViewProvider implements vscode.WebviewViewProvider {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Dependencies Cache</title>
             <style>
-                body {
-                    padding: 20px;
-                    color: var(--vscode-foreground);
-                    font-family: var(--vscode-font-family);
-                }
+                body { padding: 20px; color: var(--vscode-foreground); font-family: var(--vscode-font-family); }
                 p { margin: 0; font-size: 13px; line-height: 1.45; }
                 .dimmed { color: var(--vscode-descriptionForeground); }
-                .update-type {
-                    display: inline-block;
-                    padding: 2px 6px;
-                    border-radius: 12px;
-                    font-size: 12px;
-                    font-weight: 600;
-                    line-height: 1;
-                    text-transform: uppercase;
-                    letter-spacing: 1px;
-                    color: var(--vscode-editor-background);
-                    background-image: linear-gradient(transparent, rgba(0,0,0,.15))
-                }
+                .update-type { display: inline-block; padding: 2px 6px; border-radius: 12px; font-size: 12px; font-weight: 600; line-height: 1; text-transform: uppercase; letter-spacing: 1px; color: var(--vscode-editor-background); background-image: linear-gradient(transparent, rgba(0,0,0,.15))}
                 .update-type.patch { background-color: var(--vscode-minimapGutter-addedBackground); }
                 .update-type.minor { background-color: var(--vscode-editorWarning-foreground); }
                 .update-type.major { background-color: var(--vscode-minimapGutter-deletedBackground); }
                 .update-type.latest { background-color: transparent; color: var(--vscode-foreground); }
-                .dependency-item {
-                    margin-bottom: -1px;
-                    padding: 10px;
-                    border: 1px solid var(--vscode-panel-border);
-                    border-radius: 0;
-                }
-                
-                .dependency-item:first-of-type { border-radius: 4px 4px 0 0; }
-                .dependency-item:last-of-type { border-radius: 0 0 4px 4px; }
 
+                .dependency-item { margin-bottom: -1px; padding: 10px; border: 1px solid var(--vscode-panel-border); border-radius: 0; }
+                .dependency-item:first-of-type { border-radius: 4px 4px 0 0; }
+                .dependency-item:last-of-type { border-radius: 0 0 4px 4px; margin-bottom: 16px; }
                 .dependency-item strong { font-weight: 600; }
-                .header {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    margin-bottom: 15px;
-                }
-                .refresh-btn {
-                    padding: 8px 12px;
-                    background: var(--vscode-button-background);
-                    color: var(--vscode-button-foreground);
-                    border: none;
-                    border-radius: 4px;
-                    cursor: pointer;
-                }
-                .refresh-btn:hover {
-                    background: var(--vscode-button-hoverBackground);
-                }
-                .timestamp {
-                    font-size: 0.9em;
-                    color: var(--vscode-descriptionForeground);
-                }
-                .update-group {
-                    margin-bottom: 16px;
-                }
-                .group-title {
-                    font-size: 14px;
-                    font-weight: 600;
-                    margin: 0 0 4px 0;
-                    padding: 8px 0;
-                    background: var(--vscode-editor-lineHighlightBackground);
-                    border-radius: 4px;
-                }
+
+                .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+                .refresh-btn { padding: 4px 12px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 4px; cursor: pointer; }
+                .refresh-btn:hover { background: var(--vscode-button-hoverBackground); }
+                .timestamp { font-size: 0.9em; color: var(--vscode-descriptionForeground); }
+
+                .group-title { font-size: 14px; font-weight: 600; margin: 0 0 4px 0; padding: 8px 0; background: var(--vscode-editor-lineHighlightBackground); border-radius: 4px; }
+
+                
+                .upn-analytics { display: flex; justify-content: space-between; margin-bottom: 15px; }
+                .upn-stat { display: flex; flex:1; margin:8px; flex-direction: column; align-items: center; border:1px solid var(--vscode-panel-border); border-radius: 4px; padding: 10px; }
+                .upn-analytics .label { font-size: 0.9em; color: var(--vscode-descriptionForeground); }
+                .upn-analytics .value { font-size: 1.1em; font-weight: 600; }
             </style>
         </head>
         <body>
             <div class="header">
                 <h3 class="un-title">Dependencies Cache (0)</h3>
                 <button class="refresh-btn">Refresh</button>
+            </div>
+            <p>Update Now Analytics (performed updates)</p>
+            <div class="upn-analytics">
+                <div class="upn-patches upn-stat">
+                    <h3 class="value">0</h3>
+                    <span class="label">Patch updates</span>
+                </div>
+                <div class="upn-minor upn-stat">
+                    <h3 class="value">0</h3>
+                    <span class="label">Minor updates</span>
+                </div>
+                <div class="upn-major upn-stat">
+                    <h3 class="value">0</h3>
+                    <span class="label">Major updates</span>
+                </div>
             </div>
             <div id="content"></div>
             <div class="timestamp"></div>
@@ -156,13 +131,7 @@ export class CacheViewProvider implements vscode.WebviewViewProvider {
                     const totalCount = Object.keys(data.dependencies).length;
                     document.querySelector('.un-title').textContent = \`Dependencies Cache (\${totalCount})\`;
                     
-                    // Group dependencies by update type
-                    const groups = {
-                        patch: [],
-                        minor: [],
-                        major: [],
-                        latest: []
-                    };
+                    const groups = { patch: [], minor: [], major: [], latest: []};
 
                     // Sort dependencies into groups
                     Object.entries(data.dependencies).forEach(([name, info]) => {
@@ -177,7 +146,7 @@ export class CacheViewProvider implements vscode.WebviewViewProvider {
                         if (groups[updateType].length > 0) {
                             const groupDiv = document.createElement('div');
                             groupDiv.className = 'update-group';
-                            groupDiv.innerHTML = \`<h3 class="group-title"><span class="update-type \${updateType}">\${updateType.toUpperCase()}</span></h3>\`;
+                            groupDiv.innerHTML = \`<h3 class="group-title"><span class="update-type \${updateType}">\${updateType === 'latest' ? 'Up to date packages' : updateType.toUpperCase()}</span></h3>\`;
                             
                             // Sort alphabetically by package name
                             groups[updateType]
@@ -187,7 +156,7 @@ export class CacheViewProvider implements vscode.WebviewViewProvider {
                                     div.className = 'dependency-item';
                                     div.innerHTML = \`
                                         <p>
-                                            📦 <strong>\${info.name}</strong> <span class="dimmed">⇢</span> <strong>\${info.version}</strong>
+                                            📦 <strong>\${info.name}</strong> <span class="dimmed">\${updateType === 'latest' ? '@' : '⇢'}</span> <strong>\${info.version}</strong>
                                         </p>
                                         <p class="dimmed">\${info.description}</p>
                                     \`;
