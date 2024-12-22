@@ -40,8 +40,31 @@
         "command": "update-now.updateAllDependencies",
         "title": "Update all dependencies",
         "category": "🚀 Update Now"
+      },
+      {
+        "command": "update-now.showCacheView",
+        "title": "Show Dependencies Cache",
+        "category": "🚀 Update Now"
       }
     ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "update-now-cache",
+          "title": "Update Now",
+          "icon": "resources/logo-outline@2x.png"
+        }
+      ]
+    },
+    "views": {
+      "update-now-cache": [
+        {
+          "id": "dependenciesCache",
+          "name": "Dependencies Cache",
+          "type": "webview"
+        }
+      ]
+    },
     "codelens": {
       "languages": [
         "json"

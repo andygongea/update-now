@@ -9,6 +9,7 @@ import { VersionInfo, DependencyData, UpdateType } from "./utils/types";
 import semver from "semver";
 import { incrementUpgradeCount } from "./utils/incrementUpgradeCount";
 import { getPosition } from "./utils/getPosition";
+import { CacheViewProvider } from './webview/CacheViewProvider';
 
 const ONE_DAY_IN_MS = 24 * 60 * 60 * 1000;
 
@@ -288,42 +289,33 @@ async function updateAllDependencies(context: vscode.ExtensionContext, documentU
 export function activate(context: vscode.ExtensionContext): void {
   context.globalState.update("dependencyUpgradeCount", 0);
 
+  const provider = new DependencyCodeLensProvider(context);
+  const cacheViewProvider = new CacheViewProvider(context.extensionUri, context);
+
   context.subscriptions.push(
+    vscode.languages.registerCodeLensProvider({ language: 'json', pattern: '**/package.json' }, provider),
+    vscode.window.registerWebviewViewProvider(CacheViewProvider.viewType, cacheViewProvider),
     vscode.commands.registerCommand("update-now.updateDependency", async (documentUri, packageName, latestVersion) => {
       await updateDependency(context, documentUri, packageName, latestVersion);
-    })
-  );
-
-  const updateAllDependenciesCommand = vscode.commands.registerCommand("update-now.updateAllDependencies", async () => {
-    const editor = vscode.window.activeTextEditor;
-    if (editor && isPackageJson(editor.document)) {
-      await updateAllDependencies(context, editor.document.uri);
-    }
-  });
-
-  context.subscriptions.push(updateAllDependenciesCommand);
-
-  const codeLensProvider = new DependencyCodeLensProvider(context);
-  const selector: vscode.DocumentSelector = [
-    { language: "json", pattern: "**/package.json" },
-    { language: "jsonc", pattern: "**/package.json" },
-  ];
-
-  context.subscriptions.push(vscode.languages.registerCodeLensProvider(selector, codeLensProvider));
-
-  context.subscriptions.push(
-    vscode.workspace.onDidSaveTextDocument(async (document: vscode.TextDocument) => {
-      if (isPackageJson(document)) {
-        codeLensProvider.refreshCodeLenses(document);
+    }),
+    vscode.commands.registerCommand("update-now.updateAllDependencies", async () => {
+      const editor = vscode.window.activeTextEditor;
+      if (editor) {
+        await updateAllDependencies(context, editor.document.uri);
+      }
+    }),
+    vscode.commands.registerCommand("update-now.showNotification", () => {
+      const editor = vscode.window.activeTextEditor;
+      if (editor && isPackageJson(editor.document)) {
+        showUpdateAllNotification();
       }
     })
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("update-now.showNotification", () => {
-      const editor = vscode.window.activeTextEditor;
-      if (editor && isPackageJson(editor.document)) {
-        showUpdateAllNotification();
+    vscode.workspace.onDidSaveTextDocument(async (document: vscode.TextDocument) => {
+      if (isPackageJson(document)) {
+        provider.refreshCodeLenses(document);
       }
     })
   );
