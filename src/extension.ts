@@ -220,15 +220,25 @@ async function updateDependency(this: any, context: vscode.ExtensionContext, doc
 
   await incrementUpgradeCount(context);
 
-  vscode.window.showInformationMessage(`Awesome! 📦 ${packageName} has been updated to version: ${latestVersion}.`);
+  // Get existing tracking data and ensure it's an array
+  let existingData = context.workspaceState.get('trackUpdate') as any;
+  if (!Array.isArray(existingData)) {
+    existingData = existingData ? [existingData] : [];
+  }
+  
+  // Add new update to the array
+  await context.workspaceState.update('trackUpdate', [
+    ...existingData,
+    {
+      packageName,
+      currentVersion,
+      latestVersion,
+      updateType: getUpdateType(currentVersion, latestVersion),
+      timestamp: Date.now()
+    }
+  ]);
 
-  const trackUpdate = await this.context.workspaceState.update('trackUpdate', {
-    packageName,
-    currentVersion,
-    latestVersion,
-    updateType: getUpdateType(currentVersion, latestVersion),
-    timestamp: Date.now()
-  })
+  vscode.window.showInformationMessage(`Awesome! 📦 ${packageName} has been updated to version: ${latestVersion}.`);
 }
 
 async function updateAllDependencies(context: vscode.ExtensionContext, documentUri: vscode.Uri): Promise<void> {
