@@ -10,11 +10,14 @@ export class CacheViewProvider implements vscode.WebviewViewProvider {
         private readonly _context: vscode.ExtensionContext
     ) {}
 
+    private _webview?: vscode.Webview;
+
     public resolveWebviewView(
         webviewView: vscode.WebviewView,
         context: vscode.WebviewViewResolveContext,
         _token: vscode.CancellationToken,
     ) {
+        this._webview = webviewView.webview;
         webviewView.webview.options = {
             enableScripts: true,
             localResourceRoots: [this._extensionUri]
@@ -40,6 +43,12 @@ export class CacheViewProvider implements vscode.WebviewViewProvider {
 
         // Initial content update
         this._updateContent(webviewView.webview);
+    }
+
+    public refresh() {
+        if (this._webview) {
+            this._updateContent(this._webview);
+        }
     }
 
     private _updateContent(webview: vscode.Webview) {
@@ -161,7 +170,7 @@ export class CacheViewProvider implements vscode.WebviewViewProvider {
             </div>
             <div class="footer">
                 <h3 class="upn-title">Cached Dependencies (0)</h3>
-                <button class="refresh-btn">Refresh</button>
+                <button class="refresh-btn">Update packages data</button>
             </div>
             <div class="timestamp"></div>
 

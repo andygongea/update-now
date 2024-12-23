@@ -44,20 +44,26 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
           this.promises.push(this.updateDependencyData(document, packageName, currentVersion));
         } else {
           // Recalculate update type since package.json version might have changed
-          this.dependenciesData[packageName] = {
+          const updatedData = {
             ...storedDependency,
             updateType: getUpdateType(currentVersion, storedDependency.version) as UpdateType
           };
-
-          console.log(packageName + ": " + JSON.stringify(storedDependencies[packageName], null, 2));
-          console.log(packageName + ": " + JSON.stringify(this.dependenciesData[packageName], null, 2));
+          
+          // Update both in-memory and workspace cache
+          this.dependenciesData[packageName] = updatedData;
+          storedDependencies[packageName] = updatedData;
+          await this.context.workspaceState.update('dependenciesData', storedDependencies);
+          console.log(`[🚀Update Now] ` + `Records in cache ${packageName}@${storedDependencies[packageName].version}`);
         }
       }
 
       if (this.promises.length > 0) {
         await Promise.all(this.promises);
         await this.context.workspaceState.update('dependenciesData', this.dependenciesData);
+        console.log(`[🚀Update Now] ` + `Records from registry`);
       }
+
+      console.error(`[🚀Update Now] ` + `Records in this.dependencyData ${JSON.stringify(this.dependenciesData, null, 2)}`);
 
       this.addCodeLenses(codeLenses, document);
     }
@@ -67,7 +73,7 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
 
   private async updateDependencyData(document: vscode.TextDocument, packageName: string, currentVersion: string) {
     if (!currentVersion) {
-      console.warn(`Current version for package ${packageName} is undefined.`);
+      console.warn(`[🚀Update Now] ` + `Current version for package ${packageName} is undefined.`);
       return;
     }
 
@@ -171,10 +177,13 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
   }
 
   refreshCodeLenses = debounce(async (document: vscode.TextDocument) => {
+    // Just trigger the CodeLens refresh without clearing cache
     this._onDidChangeCodeLenses.fire();
+    
+    // Reset only the promises array for new checks
     this.promises = [];
-    this.dependenciesData = {};
-    await this.context.workspaceState.update('dependenciesData', {});
+    
+    // Let provideCodeLenses handle cache validation
     await this.provideCodeLenses(document);
   }, 50);
 }
@@ -240,7 +249,11 @@ async function updateDependency(this: any, context: vscode.ExtensionContext, doc
 
   // Refresh the cache webview
   if (cacheViewProvider) {
-    await vscode.commands.executeCommand('update-now.showCacheView');
+    try {
+      cacheViewProvider.refresh();
+    } catch (error) {
+      console.error('Failed to refresh cache view:', error);
+    }
   }
 
   vscode.window.showInformationMessage(`Awesome! 📦 ${packageName} has been updated to version: ${latestVersion}.`);
@@ -335,8 +348,12 @@ export function activate(context: vscode.ExtensionContext): void {
         showUpdateAllNotification();
       }
     }),
-    vscode.commands.registerCommand("update-now.showCacheView", () => {
-      vscode.commands.executeCommand('workbench.view.update-now-cache');
+    vscode.commands.registerCommand("update-now.showCacheView", async () => {
+      try {
+        await vscode.commands.executeCommand('workbench.view.dependenciesData');
+      } catch (error) {
+        console.error('[🚀Update Now] Failed to show cache view:', error);
+      }
     })
   );
 

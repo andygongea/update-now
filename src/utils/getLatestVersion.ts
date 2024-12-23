@@ -43,6 +43,8 @@ export async function getLatestVersion(packageName: string, retryCount = 0): Pro
       return getLatestVersion(packageName, retryCount + 1);
     }
 
+    console.log(`[🚀Update Now] ` + `Fetching latest version for ${packageName}`);
+
     // Record this request
     requestTimestamps.push(Date.now());
 

@@ -6,7 +6,12 @@ export function getPosition(document: vscode.TextDocument, packageName: string) 
     .getText()
     .split("\n")
     .findIndex((line) => regex.test(line));
-  const character = document.lineAt(line).text.indexOf(`"${packageName}":`);
 
+  // Return early if package not found
+  if (line === -1) {
+    return { line: -1, character: -1 };
+  }
+
+  const character = document.lineAt(line).text.indexOf(`"${packageName}":`);
   return { line, character };
 }
