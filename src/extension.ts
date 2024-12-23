@@ -5,7 +5,7 @@ import { showUpdateAllNotification } from "./commands/showUpdateAllNotification"
 import { debounce } from "./utils/debounce";
 import { getUpdateType } from "./utils/getUpdateType";
 import { getVersionPrefix } from "./utils/getVersionPrefix";
-import { VersionInfo, DependencyData, UpdateType } from "./utils/types";
+import { VersionInfo, IDependencyData, UpdateType } from "./utils/types";
 import semver from "semver";
 import { incrementUpgradeCount } from "./utils/incrementUpgradeCount";
 import { getPosition } from "./utils/getPosition";
@@ -18,7 +18,7 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
   public readonly onDidChangeCodeLenses: vscode.Event<void> = this._onDidChangeCodeLenses.event;
 
   private promises: Promise<any>[] = [];
-  private dependenciesData: Record<string, DependencyData> = {};
+  private dependenciesData: Record<string, IDependencyData> = {};
 
   constructor(private context: vscode.ExtensionContext) { }
 
@@ -30,7 +30,7 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
       const dependencies = packageJson.dependencies || {};
       const devDependencies = packageJson.devDependencies || {};
 
-      const storedDependencies = this.context.workspaceState.get<Record<string, DependencyData>>('dependenciesData', {});
+      const storedDependencies = this.context.workspaceState.get<Record<string, IDependencyData>>('dependenciesData', {});
 
       if (Object.keys(storedDependencies).length !== 0) {
         this.dependenciesData = storedDependencies;
@@ -209,7 +209,7 @@ async function updateDependency(this: any, context: vscode.ExtensionContext, doc
   await vscode.workspace.applyEdit(edit);
   await document.save();
 
-  const storedDependencies = context.workspaceState.get<Record<string, DependencyData>>('dependenciesData', {});
+  const storedDependencies = context.workspaceState.get<Record<string, IDependencyData>>('dependenciesData', {});
   storedDependencies[packageName] = {
     ...storedDependencies[packageName],
     version: latestVersion,
@@ -253,7 +253,7 @@ async function updateAllDependencies(context: vscode.ExtensionContext, documentU
   const devDependencies = packageJson.devDependencies || {};
   const dependenciesToUpdate: string[] = [];
 
-  const storedDependencies = context.workspaceState.get<Record<string, DependencyData>>('dependenciesData', {});
+  const storedDependencies = context.workspaceState.get<Record<string, IDependencyData>>('dependenciesData', {});
 
   for (const packageName in { ...dependencies, ...devDependencies }) {
     const currentVersion = dependencies[packageName] || devDependencies[packageName];

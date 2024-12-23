@@ -15,7 +15,7 @@ export enum UpdateType {
   url = "url",
 }
 
-export interface DependencyData {
+export interface IDependencyData {
   version: string | null;
   description?: string;
   author?: string;

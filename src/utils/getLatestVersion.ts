@@ -4,7 +4,7 @@ const ONE_DAY_IN_MS = 24 * 60 * 60 * 1000;
 const RETRY_DELAY = 1000; // 1 second delay between retries
 const MAX_RETRIES = 3;
 
-interface CachedData {
+interface ICachedData {
   version: string;
   description?: string;
   author?: {
@@ -31,7 +31,7 @@ async function wait(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-export async function getLatestVersion(packageName: string, retryCount = 0): Promise<CachedData | null> {
+export async function getLatestVersion(packageName: string, retryCount = 0): Promise<ICachedData | null> {
   try {
     if (!canMakeRequest()) {
       if (retryCount >= MAX_RETRIES) {
