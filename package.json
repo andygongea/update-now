@@ -100,7 +100,7 @@
     "typescript": "^5.6.3"
   },
   "dependencies": {
-    "axios": "1.7.7",
+    "axios": "1.7.9",
     "semver": "7.6.3"
   }
 }
