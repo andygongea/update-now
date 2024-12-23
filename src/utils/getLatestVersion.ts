@@ -16,7 +16,7 @@ interface CachedData {
 // Simple in-memory rate limiting
 const requestTimestamps: number[] = [];
 const RATE_LIMIT_WINDOW = 60000; // 1 minute
-const MAX_REQUESTS_PER_WINDOW = 30;
+const MAX_REQUESTS_PER_WINDOW = 20;
 
 function canMakeRequest(): boolean {
   const now = Date.now();
