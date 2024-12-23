@@ -5,40 +5,50 @@ export function getUpdateType(currentValue: string | undefined, newValue: string
     return "invalid";
   }
 
-  // Check if the current version or new version is a URL or GitHub shortcut
-  const isURL = (version: string) => /^https?:/.test(version) || /^git(\+ssh|\+https|\+file)?:/.test(version) || /^git@/.test(version) || /^[^\/]+\/[^\/]+$/.test(version);
-  
-  if (isURL(currentValue) || isURL(newValue)) {
-    return "url";
-  }
-
   const isRange = currentValue.startsWith("^") || currentValue.startsWith("~");
   const isLatest = currentValue === "latest";
-  const isValidCurrent = (isRange && semver.validRange(currentValue) !== null) || isLatest || (!isRange && semver.valid(currentValue) !== null);
-  const isValidNew = semver.valid(newValue);
+  const isValidCurrent = isLatest || (isRange ? semver.validRange(currentValue) !== null : semver.valid(currentValue) !== null);
+  const isValidNew = isRange ? semver.validRange(newValue) !== null : semver.valid(newValue) !== null;
 
   if (!isValidCurrent) {
     return "invalid";
   }
 
   if (!isValidNew) {
+    return isLatest ? "invalid latest" : "invalid";
+  }
+
+  // Check if the current version or new version is a URL or GitHub shortcut
+  const isURL = (version: string) =>
+    /^https?:\/\//.test(version) ||                    // HTTP(S) URLs
+    /^git(\+ssh|\+https|\+file)?:\/\//.test(version) || // Git URLs
+    /^git@[^:]+:.+\.git$/.test(version) ||            // SSH Git URLs
+    /^[^\/]+\/[^\/]+#.+$/.test(version);              // GitHub shortcuts with ref
+
+  if (isURL(currentValue) || isURL(newValue)) {
+    return "url";
+  }
+
+  const currentSemver = isLatest ? semver.coerce(newValue) : semver.coerce(currentValue);
+  const newSemver = semver.coerce(newValue);
+
+  if (!currentSemver || !newSemver) {
     return "invalid latest";
   }
 
-  const semver1 = isLatest ? semver.coerce(newValue) : semver.coerce(currentValue);
-  const semver2 = semver.coerce(newValue);
-
-  if (!semver2) {
-    return "invalid latest";
-  }
-
-  if (semver1!.major !== semver2.major) {
-    return "major";
-  } else if (semver1!.minor !== semver2.minor) {
-    return "minor";
-  } else if (semver1!.patch !== semver2.patch) {
-    return "patch";
-  } else {
-    return "latest";
+  // Compare versions using semver.diff for more accurate comparison
+  const diff = semver.diff(currentSemver, newSemver);
+  
+  switch (diff) {
+    case 'major':
+      return "major";
+    case 'minor':
+      return "minor";
+    case 'patch':
+      return "patch";
+    case null:
+      return "latest";
+    default:
+      return isLatest ? "latest" : "patch";
   }
 }
