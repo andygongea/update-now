@@ -10,6 +10,8 @@ import semver from "semver";
 import { incrementUpgradeCount } from "./utils/incrementUpgradeCount";
 import { getPosition } from "./utils/getPosition";
 import { CacheViewProvider } from './webview/CacheViewProvider';
+import { logger } from './utils/logger';
+import { isURL } from './utils/isURL';
 
 const ONE_DAY_IN_MS = 24 * 60 * 60 * 1000;
 
@@ -22,53 +24,71 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
 
   constructor(private context: vscode.ExtensionContext) { }
 
+  private async validateAndUpdateDependencies(
+    document: vscode.TextDocument,
+    dependencies: Record<string, string>,
+    storedDependencies: Record<string, IDependencyData>
+  ): Promise<void> {
+    const currentTime = Date.now();
+    const updatePromises: Promise<any>[] = [];
+
+    for (const [packageName, currentVersion] of Object.entries(dependencies)) {
+      const storedDependency = storedDependencies[packageName];
+      const needsUpdate = !storedDependency || 
+                         currentTime - storedDependency.timestamp >= ONE_DAY_IN_MS || 
+                         storedDependency.version === null;
+
+      if (needsUpdate) {
+        updatePromises.push(this.updateDependencyData(document, packageName, currentVersion));
+      } else {
+        this.updateStoredDependency(packageName, currentVersion, storedDependency);
+      }
+    }
+
+    if (updatePromises.length > 0) {
+      await Promise.all(updatePromises);
+      await this.context.workspaceState.update('dependenciesData', this.dependenciesData);
+    }
+  }
+
+  private updateStoredDependency(
+    packageName: string, 
+    currentVersion: string, 
+    storedDependency: IDependencyData
+  ): void {
+    const updatedData = {
+      ...storedDependency,
+      updateType: getUpdateType(currentVersion, storedDependency.version || '') as UpdateType
+    };
+    
+    this.dependenciesData[packageName] = updatedData;
+  }
+
   async provideCodeLenses(document: vscode.TextDocument): Promise<vscode.CodeLens[]> {
     const codeLenses: vscode.CodeLens[] = [];
 
-    if (isPackageJson(document)) {
-      const packageJson = JSON.parse(document.getText());
-      const dependencies = packageJson.dependencies || {};
-      const devDependencies = packageJson.devDependencies || {};
-
-      const storedDependencies = this.context.workspaceState.get<Record<string, IDependencyData>>('dependenciesData', {});
-
-      if (Object.keys(storedDependencies).length !== 0) {
-        this.dependenciesData = storedDependencies;
-      }
-
-      const currentTime = Date.now();
-      for (const packageName in { ...dependencies, ...devDependencies }) {
-        const currentVersion = dependencies[packageName] || devDependencies[packageName];
-        const storedDependency = storedDependencies[packageName];
-        if (!storedDependency || currentTime - storedDependency.timestamp >= ONE_DAY_IN_MS || storedDependency.version === null) {
-          this.promises.push(this.updateDependencyData(document, packageName, currentVersion));
-        } else {
-          // Recalculate update type since package.json version might have changed
-          const updatedData = {
-            ...storedDependency,
-            updateType: getUpdateType(currentVersion, storedDependency.version) as UpdateType
-          };
-          
-          // Update both in-memory and workspace cache
-          this.dependenciesData[packageName] = updatedData;
-          storedDependencies[packageName] = updatedData;
-          await this.context.workspaceState.update('dependenciesData', storedDependencies);
-          console.log(`[🚀Update Now] ` + `Records in cache ${packageName}@${storedDependencies[packageName].version}`);
-        }
-      }
-
-      if (this.promises.length > 0) {
-        await Promise.all(this.promises);
-        await this.context.workspaceState.update('dependenciesData', this.dependenciesData);
-        console.log(`[🚀Update Now] ` + `Records from registry`);
-      }
-
-      console.error(`[🚀Update Now] ` + `Records in this.dependencyData ${JSON.stringify(this.dependenciesData, null, 2)}`);
-
-      this.addCodeLenses(codeLenses, document);
+    if (!isPackageJson(document)) {
+      return codeLenses;
     }
 
-    return codeLenses;
+    try {
+      const packageJson = JSON.parse(document.getText());
+      const allDependencies = {
+        ...packageJson.dependencies || {},
+        ...packageJson.devDependencies || {}
+      };
+
+      const storedDependencies = this.context.workspaceState.get<Record<string, IDependencyData>>('dependenciesData', {});
+      this.dependenciesData = Object.keys(storedDependencies).length !== 0 ? storedDependencies : {};
+
+      await this.validateAndUpdateDependencies(document, allDependencies, storedDependencies);
+      this.addCodeLenses(codeLenses, document);
+
+      return codeLenses;
+    } catch (error) {
+      console.error(`[🚀Update Now] Error in provideCodeLenses:`, error);
+      return codeLenses;
+    }
   }
 
   private async updateDependencyData(document: vscode.TextDocument, packageName: string, currentVersion: string) {
@@ -199,11 +219,29 @@ async function updateDependency(this: any, context: vscode.ExtensionContext, doc
     return;
   }
 
-  const isMajorUpdate = semver.diff(latestVersion, currentVersion.replace(/^[~^]/, "")) === "major";
+  // Clean versions for comparison
+  const cleanCurrentVersion = currentVersion.replace(/^[~^]/, "");
+  const cleanLatestVersion = latestVersion.replace(/^[~^]/, "");
+
+  if (!cleanLatestVersion) {
+    vscode.window.showErrorMessage(`Invalid version format: ${latestVersion}`);
+    return;
+  }
+
+  // Compare clean versions
+  const isMajorUpdate = semver.diff(cleanLatestVersion, cleanCurrentVersion) === "major";
   const versionPrefix = getVersionPrefix(currentVersion);
-  let updatedVersion = latestVersion;
+  
+  // Only apply prefix if it's not a major update and we had a prefix before
+  let updatedVersion = cleanLatestVersion;
   if (!isMajorUpdate && versionPrefix) {
-    updatedVersion = versionPrefix + updatedVersion;
+    // Validate the version with prefix is valid
+    const prefixedVersion = versionPrefix + cleanLatestVersion;
+    if (!semver.validRange(prefixedVersion)) {
+      vscode.window.showErrorMessage(`Invalid version format after applying prefix: ${prefixedVersion}`);
+      return;
+    }
+    updatedVersion = prefixedVersion;
   }
 
   if (packageJson.dependencies[packageName]) {
@@ -260,66 +298,59 @@ async function updateDependency(this: any, context: vscode.ExtensionContext, doc
 }
 
 async function updateAllDependencies(context: vscode.ExtensionContext, documentUri: vscode.Uri): Promise<void> {
+  logger.info('Starting update all dependencies process');
   const document = await vscode.workspace.openTextDocument(documentUri);
   const packageJson = JSON.parse(document.getText());
   const dependencies = packageJson.dependencies || {};
   const devDependencies = packageJson.devDependencies || {};
+  const storedDependencies = context.workspaceState.get<Record<string, IDependencyData>>('dependenciesData', {});
   const dependenciesToUpdate: string[] = [];
 
-  const storedDependencies = context.workspaceState.get<Record<string, IDependencyData>>('dependenciesData', {});
+  logger.debug('Initial package.json state:', { dependencies, devDependencies });
 
   for (const packageName in { ...dependencies, ...devDependencies }) {
-    const currentVersion = dependencies[packageName] || devDependencies[packageName];
-    const versionPrefix = getVersionPrefix(currentVersion);
-    const strippedCurrentVersion = currentVersion.replace(/^[~^]/, "");
-    const latestVersionData = storedDependencies[packageName] && Date.now() - storedDependencies[packageName].timestamp < ONE_DAY_IN_MS
-      ? storedDependencies[packageName]
-      : (await getLatestVersion(packageName)) as VersionInfo | null;
-
-    const isURL = (currentVersion: string) => /^https?:/.test(currentVersion) || /^git(\+ssh|\+https|\+file)?:/.test(currentVersion) || /^git@/.test(currentVersion) || /^[^\/]+\/[^\/]+$/.test(currentVersion);
-
-    if (latestVersionData && latestVersionData.version && semver.valid(latestVersionData.version) && !isURL(currentVersion)) {
-      const diff = semver.diff(latestVersionData.version, strippedCurrentVersion);
-      const isPatchUpdate = diff === "patch";
-      const isMinorUpdate = diff === "minor";
-
-      let newVersion = latestVersionData.version;
-      if (versionPrefix === "~" && isPatchUpdate) {
-        newVersion = "~" + newVersion;
-      } else if (versionPrefix === "^" && (isPatchUpdate || isMinorUpdate)) {
-        newVersion = "^" + newVersion;
+    try {
+      logger.info(`Processing package: ${packageName}`);
+      const currentVersion = dependencies[packageName] || devDependencies[packageName];
+      
+      if (isURL(currentVersion)) {
+        logger.info(`Skipping ${packageName} - URL dependency`);
+        continue;
       }
 
-      if (newVersion !== currentVersion) {
-        dependenciesToUpdate.push(packageName);
-        if (dependencies[packageName]) {
-          packageJson.dependencies[packageName] = newVersion;
-        } else if (devDependencies[packageName]) {
-          packageJson.devDependencies[packageName] = newVersion;
+      const latestVersionData = storedDependencies[packageName] && Date.now() - storedDependencies[packageName].timestamp < ONE_DAY_IN_MS
+        ? storedDependencies[packageName]
+        : (await getLatestVersion(packageName)) as VersionInfo | null;
+
+      logger.debug(`Latest version data for ${packageName}:`, latestVersionData);
+
+      if (latestVersionData?.version && semver.valid(latestVersionData.version)) {
+        const strippedCurrentVersion = currentVersion.replace(/^[~^]/, "");
+        if (latestVersionData.version !== strippedCurrentVersion) {
+          logger.info(`Update found for ${packageName}: ${currentVersion} -> ${latestVersionData.version}`);
+          dependenciesToUpdate.push(packageName);
+          await updateDependency(context, documentUri, packageName, latestVersionData.version);
+        } else {
+          logger.info(`No update needed for ${packageName}`);
         }
-        storedDependencies[packageName] = {
-          version: newVersion,
-          timestamp: Date.now(),
-          updateType: UpdateType.latest,
-        };
+      } else {
+        logger.info(`Skipping ${packageName} - invalid version data`);
       }
+    } catch (error) {
+      logger.error(`Error processing package ${packageName}`, error);
     }
   }
 
-  if (dependenciesToUpdate.length !== 0) {
-    const updatedText = JSON.stringify(packageJson, null, 2);
-    const edit = new vscode.WorkspaceEdit();
-    edit.replace(document.uri, new vscode.Range(document.positionAt(0), document.positionAt(document.getText().length)), updatedText);
-    await vscode.workspace.applyEdit(edit);
-    await document.save();
-
-    await context.workspaceState.update('dependenciesData', storedDependencies);
-    await incrementUpgradeCount(context);
-
-    vscode.window.showInformationMessage("Yay! 🥳 All dependencies have been updated to their latest version.");
-  } else {
+  logger.info(`Processed ${dependenciesToUpdate.length} dependencies`);
+  
+  if (dependenciesToUpdate.length === 0) {
+    logger.info('No dependencies need updating');
     vscode.window.showInformationMessage("All dependencies are up to date.");
+  } else {
+    logger.info('Successfully updated all dependencies');
+    vscode.window.showInformationMessage(`Yay! 🥳 Updated ${dependenciesToUpdate.length} dependencies to their latest versions.`);
   }
+  logger.show();
 }
 
 let cacheViewProvider: CacheViewProvider;
