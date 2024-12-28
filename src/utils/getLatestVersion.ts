@@ -17,6 +17,7 @@ interface ICachedData {
 const requestTimestamps: number[] = [];
 const RATE_LIMIT_WINDOW = 60000; // 1 minute
 const MAX_REQUESTS_PER_WINDOW = 20;
+const BATCH_DELAY = 4000; // 5 second delay between batches
 
 function canMakeRequest(): boolean {
   const now = Date.now();
@@ -31,27 +32,26 @@ async function wait(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-export async function getLatestVersion(packageName: string, retryCount = 0): Promise<ICachedData | null> {
+export async function getLatestVersion(packageName: string): Promise<ICachedData | null> {
   try {
     if (!canMakeRequest()) {
-      if (retryCount >= MAX_RETRIES) {
-        console.error(`Rate limit exceeded for ${packageName} after ${MAX_RETRIES} retries`);
-        return null;
-      }
-      // Wait before retrying
-      await wait(RETRY_DELAY);
-      return getLatestVersion(packageName, retryCount + 1);
+      // Wait for the batch delay before proceeding
+      await wait(BATCH_DELAY);
+      return getLatestVersion(packageName);
     }
 
-    console.log(`[🚀Update Now] ` + `Fetching latest version for ${packageName}`);
-
-    // Record this request
+    // Record this request and get current batch number
+    const currentRequestNumber = requestTimestamps.length + 1;
     requestTimestamps.push(Date.now());
+
+    console.log(`[🚀Update Now] Fetching latest version for ${packageName} (Request ${currentRequestNumber}/${MAX_REQUESTS_PER_WINDOW} in current batch)`);
 
     // Fetch the latest version from NPM registry
     const url = `https://registry.npmjs.org/${packageName}/latest`;
     const response = await axios.get(url);
     const latestVersionData = response.data;
+
+    console.log(`[✅Success] Received version ${latestVersionData.version} for ${packageName} (Request ${currentRequestNumber}/${MAX_REQUESTS_PER_WINDOW})`);
 
     return {
       version: latestVersionData.version,
@@ -61,13 +61,8 @@ export async function getLatestVersion(packageName: string, retryCount = 0): Pro
     };
   } catch (error: any) {
     if (axios.isAxiosError(error) && error.response?.status === 429) {
-      if (retryCount >= MAX_RETRIES) {
-        console.error(`Rate limit exceeded for ${packageName} after ${MAX_RETRIES} retries`);
-        return null;
-      }
-      // Wait before retrying
-      await wait(RETRY_DELAY);
-      return getLatestVersion(packageName, retryCount + 1);
+      console.error(`[Rate Limit] Package ${packageName} failed due to rate limit (429)`);
+      return null;
     }
 
     console.error(`Error fetching latest version for ${packageName}:`, error);

@@ -208,7 +208,7 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
   }, 50);
 }
 
-async function updateDependency(this: any, context: vscode.ExtensionContext, documentUri: vscode.Uri, packageName: string, latestVersion: string): Promise<void> {
+async function updateDependency(this: any, context: vscode.ExtensionContext, documentUri: vscode.Uri, packageName: string, latestVersion: string, showNotification: boolean = true): Promise<void> {
   const document = await vscode.workspace.openTextDocument(documentUri);
   const text = document.getText();
   const packageJson = JSON.parse(text);
@@ -294,7 +294,9 @@ async function updateDependency(this: any, context: vscode.ExtensionContext, doc
     }
   }
 
-  vscode.window.showInformationMessage(`Awesome! 📦 ${packageName} has been updated to version: ${latestVersion}.`);
+  if (showNotification) {
+    vscode.window.showInformationMessage(`Awesome! 📦 ${packageName} has been updated to version: ${latestVersion}.`);
+  }
 }
 
 async function updateAllDependencies(context: vscode.ExtensionContext, documentUri: vscode.Uri): Promise<void> {
@@ -329,7 +331,7 @@ async function updateAllDependencies(context: vscode.ExtensionContext, documentU
         if (latestVersionData.version !== strippedCurrentVersion) {
           logger.info(`Update found for ${packageName}: ${currentVersion} -> ${latestVersionData.version}`);
           dependenciesToUpdate.push(packageName);
-          await updateDependency(context, documentUri, packageName, latestVersionData.version);
+          await updateDependency(context, documentUri, packageName, latestVersionData.version, false);
         } else {
           logger.info(`No update needed for ${packageName}`);
         }
@@ -348,7 +350,7 @@ async function updateAllDependencies(context: vscode.ExtensionContext, documentU
     vscode.window.showInformationMessage("All dependencies are up to date.");
   } else {
     logger.info('Successfully updated all dependencies');
-    vscode.window.showInformationMessage(`Yay! 🥳 Updated ${dependenciesToUpdate.length} dependencies to their latest versions.`);
+    vscode.window.showInformationMessage(`🎩 Congrats! You just updated ${dependenciesToUpdate.length} dependencies to their latest versions. Please ensure you code still runs as intended.`);
   }
   logger.show();
 }
