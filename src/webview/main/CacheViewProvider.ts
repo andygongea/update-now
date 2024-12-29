@@ -258,7 +258,7 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
 
         const settingsSection = `
             <div class="settings-section">
-                <h4 class="group-title">CodeLens settings</h4>
+                <h4 class="settings-title">CodeLens settings</h4>
                 <div class="settings-group">
                     <p class="dimmed">To reduce the number of CodeLens, you can choose which update types to show.</p>
                     <div class="setting-item">
@@ -292,6 +292,14 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
             </div>
         `;
 
+        const emptyStateMessage = `
+            <div class="upn-empty-state is-hidden">
+                <h1 class="upn-icon">📦</h1>
+                <p class="upn-message">Open a  <strong>package.json</strong> file to see dependencies data.</p>
+                <p class="upn-message dimmed">Once opened, you can see the dependencies data.</p>
+            </div>
+        `;
+
         const warningMessage = `
             <div class="upn-warning">
                 <p class="upn-message">⚠️ You have disabled CodeLens for the following update types:</br>
@@ -304,7 +312,6 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                 const vscode = acquireVsCodeApi();
                 const content = document.getElementById('content');
                 const timestamp = document.querySelector('.timestamp');
-                const refreshBtn = document.querySelector('.refresh-btn');
                 const analytics = document.querySelector('.upn-analytics');
                 const tabItems = document.querySelectorAll('.upn-tab-item');
                 const tabContents = document.querySelectorAll('.upn-tab-content');
@@ -344,10 +351,6 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                 // Set initial active tab
                 tabItems[0].classList.add('is-active');
                 tabContents[0].classList.add('is-active');
-
-                refreshBtn.addEventListener('click', () => {
-                    vscode.postMessage({ command: 'refresh' });
-                });
 
                 window.addEventListener('message', event => {
                     const message = event.data;
@@ -550,6 +553,6 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                 setupSettingsListeners();
             })();`;
 
-        return getCacheViewTemplate(webview, this._getMediaUrl.bind(this), settingsSection, scriptContent, warningMessage);
+        return getCacheViewTemplate(webview, this._getMediaUrl.bind(this), settingsSection, scriptContent, warningMessage, emptyStateMessage);
     }
 }
