@@ -363,9 +363,17 @@ export function activate(context: vscode.ExtensionContext): void {
   const provider = new DependencyCodeLensProvider(context);
   cacheViewProvider = new CacheViewProvider(context.extensionUri, context);
 
+  vscode.workspace.findFiles('**/package.json', '**/node_modules/**').then(async (packageJsonFiles) => {
+    if (packageJsonFiles.length > 0) {
+      const document = await vscode.workspace.openTextDocument(packageJsonFiles[0]);
+      provider.refreshCodeLenses(document);
+    }
+  });
+
   context.subscriptions.push(
     vscode.languages.registerCodeLensProvider({ language: 'json', pattern: '**/package.json' }, provider),
     vscode.window.registerWebviewViewProvider(CacheViewProvider.viewType, cacheViewProvider),
+    cacheViewProvider,
     vscode.commands.registerCommand("update-now.updateDependency", async (documentUri, packageName, latestVersion) => {
       await updateDependency(context, documentUri, packageName, latestVersion);
     }),
