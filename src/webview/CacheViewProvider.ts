@@ -1,5 +1,14 @@
 import * as vscode from 'vscode';
 
+function getNonce() {
+    let text = '';
+    const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    for (let i = 0; i < 32; i++) {
+        text += possible.charAt(Math.floor(Math.random() * possible.length));
+    }
+    return text;
+}
+
 /** Type of dependency update available */
 type UpdateType = 'patch' | 'minor' | 'major' | 'latest';
 
@@ -12,8 +21,13 @@ interface IDependencyInfo {
 
 /** Message sent from webview to extension */
 interface IWebviewMessage {
-    command: 'refresh' | 'navigateToPackage';
+    command: 'refresh' | 'navigateToPackage' | 'updateSettings';
     packageName?: string;
+    settings?: {
+        showPatch?: boolean;
+        showMinor?: boolean;
+        showMajor?: boolean;
+    };
 }
 
 /** Message sent from extension to webview */
@@ -22,6 +36,11 @@ interface IUpdateData {
     trackUpdate: any[];
     timestamp: string;
     analytics: Record<UpdateType, number>;
+    settings: {
+        showPatch: boolean;
+        showMinor: boolean;
+        showMajor: boolean;
+    };
 }
 
 /**
@@ -108,6 +127,20 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                 case 'navigateToPackage':
                     this._navigateToPackage(message.packageName || '');
                     return;
+                case 'updateSettings':
+                    if (message.settings) {
+                        const config = vscode.workspace.getConfiguration('update-now.codeLens');
+                        if (typeof message.settings.showPatch === 'boolean') {
+                            config.update('patch', message.settings.showPatch, true);
+                        }
+                        if (typeof message.settings.showMinor === 'boolean') {
+                            config.update('minor', message.settings.showMinor, true);
+                        }
+                        if (typeof message.settings.showMajor === 'boolean') {
+                            config.update('major', message.settings.showMajor, true);
+                        }
+                    }
+                    return;
             }
         });
 
@@ -137,6 +170,14 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
         const trackIUpdateData = this._context.workspaceState.get<any[]>('trackUpdate', []);
         const currentTime = new Date().toISOString();
         
+        // Get current settings
+        const config = vscode.workspace.getConfiguration('update-now.codeLens');
+        const settings = {
+            showPatch: config.get<boolean>('patch', true),
+            showMinor: config.get<boolean>('minor', true),
+            showMajor: config.get<boolean>('major', true)
+        };
+
         // Get current package.json content if any is open
         let currentPackageDeps: Record<string, IDependencyInfo> = {};
         const activeEditor = vscode.window.activeTextEditor;
@@ -185,7 +226,8 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
             dependencies: currentPackageDeps,  // Only send dependencies from current package.json
             trackUpdate: trackIUpdateData.filter(update => update?.packageName && currentPackageDeps[update.packageName]),  // Filter update history
             timestamp: currentTime,
-            analytics: updateCounts
+            analytics: updateCounts,
+            settings: settings  // Add settings to the data
         };
 
         webview.postMessage({ type: 'update', data });
@@ -227,7 +269,36 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
     }
 
     private _getHtmlForWebview(webview: vscode.Webview) {
-        const scriptContent = /* javascript */ `
+        const nonce = getNonce();
+
+        const settingsSection = `
+            <div class="settings-section">
+                <h4 class="group-title">CodeLens settings</h4>
+                <div class="settings-group">
+                    <p>To reduce the number of CodeLens, you can choose which update types to show.</p>
+                    <div class="setting-item">
+                        <label class="setting-label">
+                            <input type="checkbox" id="showPatch" class="setting-checkbox">
+                            <span class="setting-title">Show CodeLens for Patch updates - ❇️</span>
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <label class="setting-label">
+                            <input type="checkbox" id="showMinor" class="setting-checkbox">
+                            <span class="setting-title">Show CodeLens for Minor updates - ✴️</span>
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <label class="setting-label">
+                            <input type="checkbox" id="showMajor" class="setting-checkbox">
+                            <span class="setting-title">Show CodeLens for Major updates - 🛑</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const scriptContent = `
             (function() {
                 const vscode = acquireVsCodeApi();
                 const content = document.getElementById('content');
@@ -287,7 +358,7 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                 });
 
                 function updateContent(data) {
-                    const availableUpdates = document.getElementById('availabe-updates');
+                    const availableUpdates = document.getElementById('available-updates');
                     const upToDate = document.getElementById('up-to-date');
                     const historicUpdates = document.getElementById('historic-updates');
                     
@@ -337,7 +408,7 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                             const groupDiv = document.createElement('div');
                             groupDiv.className = 'update-group';
                             groupDiv.innerHTML = '<h3 class="group-title"><span class="update-type ' + 
-                                updateType + '"></span></h3>';
+                                updateType + '"> Updates</span></h3>';
                              
                             groups[updateType]
                                 .sort((a, b) => a.name.localeCompare(b.name))
@@ -392,7 +463,7 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                     if (data.trackUpdate && data.trackUpdate.length > 0 && historicUpdates) {
                         const historyDiv = document.createElement('div');
                         historyDiv.className = 'update-group';
-                        historyDiv.innerHTML = '<h3 class="group-title"><span class="update-type">⌛ Update history</span></h3>';
+                        historyDiv.innerHTML = '<h3 class="group-title"><span class="update-type">⌛ 100 Most recent updates</span></h3>';
                         
                         // Group updates by timestamp
                         const groupedUpdates = data.trackUpdate
@@ -411,7 +482,7 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                         Object.entries(groupedUpdates).forEach(([timeKey, updates]) => {
                             const timeGroup = document.createElement('ul');
                             timeGroup.className = 'time-group';
-                            timeGroup.innerHTML = '<li class="timestamp">' + '<div class="dimmed">' + timeKey + '</div>';
+                            timeGroup.innerHTML = '<li class="timestamp">Updated ' + timeKey;
                             
                             const updatesContainer = document.createElement('ul');
                             updatesContainer.className = 'updates-container';
@@ -420,7 +491,7 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                                 const li = document.createElement('li');
                                 li.className = 'history-item';
                                 li.innerHTML = 
-                                    '<span>📦 ' + update.packageName + ' <span class="dimmed">@</span> ' + update.currentVersion + '</span> ' +
+                                    '<span>📦 ' + update.packageName + '<span class="dimmed">@</span>' + update.currentVersion + '</span> ' +
                                     '<span class="dimmed">⇢</span> ' +
                                     '<strong>' + update.latestVersion + '</strong> ';
                                 updatesContainer.appendChild(li);
@@ -443,7 +514,36 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                             }
                         }
                     });
+
+                    // Update settings checkboxes
+                    if (data.settings) {
+                        ['showPatch', 'showMinor', 'showMajor'].forEach(setting => {
+                            const checkbox = document.getElementById(setting);
+                            if (checkbox) {
+                                checkbox.checked = data.settings[setting];
+                            }
+                        });
+                    }
                 }
+
+                // Add settings event listeners
+                function setupSettingsListeners() {
+                    ['showPatch', 'showMinor', 'showMajor'].forEach(setting => {
+                        const checkbox = document.getElementById(setting);
+                        if (checkbox) {
+                            checkbox.addEventListener('change', (e) => {
+                                const settings = {};
+                                settings[setting] = e.target.checked;
+                                vscode.postMessage({
+                                    command: 'updateSettings',
+                                    settings
+                                });
+                            });
+                        }
+                    });
+                }
+
+                setupSettingsListeners();
             })();`;
 
         return `<!DOCTYPE html>
@@ -472,7 +572,7 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                 .dependency-item strong { font-weight: 600; }
                 .upn-to-update .dependency-item:hover { background-color: var(--vscode-editor-background); cursor: pointer; }
 
-                .footer { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+                .footer { display: flex; flex-direction: column; align-items: center; margin-bottom: 15px; }
                 .refresh-btn { padding: 4px 12px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 4px; cursor: pointer; }
                 .refresh-btn:hover { background: var(--vscode-button-hoverBackground); }
                 
@@ -499,6 +599,12 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                 .time-group::before { content:"" ; position: absolute; top: 12px; left: 0px; width: 8px; bottom: 0px; border: 1px dashed var(--vscode-panel-border); border-right:none; border-radius: 4px 0 0 4px; }
                 .time-group .timestamp { list-style:none; padding: 4px 0; margin-bottom: 4px; }
                 .updates-container { padding: 0; list-style: none; }
+
+                .settings-section { margin-bottom: 20px; }
+                .settings-group { display: flex; flex-wrap: wrap; }
+                .setting-item { margin: 10px; }
+                .setting-label { display: flex; align-items: center; cursor: pointer; }
+                .setting-checkbox { margin-right: 10px; }
             </style>
         </head>
         <body>
@@ -511,7 +617,7 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                 </div>
                 <div class="upn-tab-contents">
                     <div class="upn-tab-content upn-to-update is-active">
-                        <div id="availabe-updates"></div>
+                        <div id="available-updates"></div>
                     </div>
                     <div class="upn-tab-content">
                         <div id="up-to-date"></div>
@@ -537,10 +643,19 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                 </div>
             </div>
             <div class="footer">
-                <h3 class="upn-title">Cached Dependencies (0)</h3>
-                <button class="refresh-btn">Update packages data</button>
+                <h3 class="upn-footer-title">⚙️ Update Now Settings</h3>
+                <div class="upn-footer-section">
+                    <div class="settings-section">
+                        ${settingsSection}
+                    </div>
+                </div>
+                <div class="upn-footer-section">
+                    <h4 class="upn-title">Cached Dependencies (0)</h4>
+                    <div class="timestamp"></div>
+                    <div class="upn-cache-size"></div>
+                    <button class="refresh-btn">Update packages data</button>
+                </div>
             </div>
-            <div class="timestamp"></div>
 
             <script>${scriptContent}</script>
         </body>
