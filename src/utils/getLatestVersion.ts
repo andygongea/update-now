@@ -44,7 +44,7 @@ export async function getLatestVersion(packageName: string): Promise<ICachedData
     const currentRequestNumber = requestTimestamps.length + 1;
     requestTimestamps.push(Date.now());
 
-    console.log(`[🚀Update Now] Fetching latest version for ${packageName} (Request ${currentRequestNumber}/${MAX_REQUESTS_PER_WINDOW} in current batch)`);
+    console.log(`[⇪ Update Now] Fetching latest version for ${packageName} (Request ${currentRequestNumber}/${MAX_REQUESTS_PER_WINDOW} in current batch)`);
 
     // Fetch the latest version from NPM registry
     const url = `https://registry.npmjs.org/${packageName}/latest`;

@@ -44,9 +44,9 @@ Each dependency can be updated individually, depending on your project's needs a
 
 There is a global update command and action to update all dependencies simultaneously.
 1. The command can be executed by searching for it in the Command Pallete:  
-  - **🚀 Update now: Update all dependencies**.
+  - **⇪ Update now: Update all dependencies**.
 2. The second option is the code lens that is at the top of each package.json file: 
-  - **Update now: 25 available updates (❇️ 5 x patch, ✴️ 10 x minor, 🛑 5 x major)**
+  - **⇪ Update now: 25 available updates (❇️ 5 x patch, ✴️ 10 x minor, 🛑 5 x major)**
 
 ### Which are the supported package managers?
 For now, the only package manager supported is NPM. There is a work in progress to support multiple package managers, the upcoming one being Packagist for the PHP ecosystem.

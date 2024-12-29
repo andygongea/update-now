@@ -9,7 +9,7 @@ import { VersionInfo, IDependencyData, UpdateType } from "./utils/types";
 import semver from "semver";
 import { incrementUpgradeCount } from "./utils/incrementUpgradeCount";
 import { getPosition } from "./utils/getPosition";
-import { CacheViewProvider } from './webview/CacheViewProvider';
+import { CacheViewProvider } from './webview/main/CacheViewProvider';
 import { logger } from './utils/logger';
 import { isURL } from './utils/isURL';
 
@@ -86,14 +86,14 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
 
       return codeLenses;
     } catch (error) {
-      console.error(`[🚀Update Now] Error in provideCodeLenses:`, error);
+      console.error(`[⇪ Update Now] Error in provideCodeLenses:`, error);
       return codeLenses;
     }
   }
 
   private async updateDependencyData(document: vscode.TextDocument, packageName: string, currentVersion: string) {
     if (!currentVersion) {
-      console.warn(`[🚀Update Now] ` + `Current version for package ${packageName} is undefined.`);
+      console.warn(`[⇪ Update Now] ` + `Current version for package ${packageName} is undefined.`);
       return;
     }
 
@@ -451,7 +451,7 @@ export function activate(context: vscode.ExtensionContext): void {
       try {
         await vscode.commands.executeCommand('workbench.view.dependenciesData');
       } catch (error) {
-        console.error('[🚀Update Now] Failed to show cache view:', error);
+        console.error('[⇪ Update Now] Failed to show cache view:', error);
       }
     })
   );

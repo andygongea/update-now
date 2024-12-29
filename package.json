@@ -41,17 +41,17 @@
         "update-now.codeLens.patch": {
           "type": "boolean",
           "default": true,
-          "description": "Show code lens for patch version updates"
+          "description": "❇️ Show CodeLens for PATCH version updates"
         },
         "update-now.codeLens.minor": {
           "type": "boolean",
           "default": true,
-          "description": "Show code lens for minor version updates"
+          "description": "✴️ Show CodeLens for MINOR version updates"
         },
         "update-now.codeLens.major": {
           "type": "boolean",
           "default": true,
-          "description": "Show code lens for major version updates"
+          "description": "🛑Show CodeLens for MAJOR version updates"
         }
       }
     },
@@ -59,12 +59,12 @@
       {
         "command": "update-now.updateAllDependencies",
         "title": "Update all dependencies",
-        "category": "🚀 Update Now"
+        "category": "⇪ Update Now"
       },
       {
         "command": "update-now.showCacheView",
         "title": "Show Dependencies Data",
-        "category": "🚀 Update Now"
+        "category": "⇪ Update Now"
       }
     ],
     "viewsContainers": {

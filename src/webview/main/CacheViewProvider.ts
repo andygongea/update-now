@@ -1,4 +1,6 @@
 import * as vscode from 'vscode';
+import { UpdateType, IDependencyInfo, IWebviewMessage, IUpdateData } from './types';
+import { getCacheViewTemplate } from './template';
 
 function getNonce() {
     let text = '';
@@ -7,40 +9,6 @@ function getNonce() {
         text += possible.charAt(Math.floor(Math.random() * possible.length));
     }
     return text;
-}
-
-/** Type of dependency update available */
-type UpdateType = 'patch' | 'minor' | 'major' | 'latest';
-
-/** Information about a single dependency */
-interface IDependencyInfo {
-    currentVersion: string;
-    latestVersion: string;
-    updateType: UpdateType;
-}
-
-/** Message sent from webview to extension */
-interface IWebviewMessage {
-    command: 'refresh' | 'navigateToPackage' | 'updateSettings';
-    packageName?: string;
-    settings?: {
-        showPatch?: boolean;
-        showMinor?: boolean;
-        showMajor?: boolean;
-    };
-}
-
-/** Message sent from extension to webview */
-interface IUpdateData {
-    dependencies: Record<string, IDependencyInfo>;
-    trackUpdate: any[];
-    timestamp: string;
-    analytics: Record<UpdateType, number>;
-    settings: {
-        showPatch: boolean;
-        showMinor: boolean;
-        showMajor: boolean;
-    };
 }
 
 /**
@@ -140,6 +108,9 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                             config.update('major', message.settings.showMajor, true);
                         }
                     }
+                    return;
+                case 'focusPackageJson':
+                    this._focusOnPackageJson();
                     return;
             }
         });
@@ -268,6 +239,20 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
         }
     }
 
+    private _focusOnPackageJson() {
+        const editors = vscode.window.visibleTextEditors;
+        for (const editor of editors) {
+            if (editor.document.fileName.endsWith('package.json')) {
+                vscode.window.showTextDocument(editor.document);
+                return;
+            }
+        }
+    }
+
+    private _getMediaUrl(fileName: string): vscode.Uri {
+        return this._webview!.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'src', 'webview', fileName));
+    }
+
     private _getHtmlForWebview(webview: vscode.Webview) {
         const nonce = getNonce();
 
@@ -275,26 +260,42 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
             <div class="settings-section">
                 <h4 class="group-title">CodeLens settings</h4>
                 <div class="settings-group">
-                    <p>To reduce the number of CodeLens, you can choose which update types to show.</p>
+                    <p class="dimmed">To reduce the number of CodeLens, you can choose which update types to show.</p>
                     <div class="setting-item">
                         <label class="setting-label">
-                            <input type="checkbox" id="showPatch" class="setting-checkbox">
-                            <span class="setting-title">Show CodeLens for Patch updates - ❇️</span>
+                            <span class="setting-title">❇️ Show CodeLens for Patch updates </span>
+                            <div class="switch">
+                                <input type="checkbox" id="showPatch" class="setting-checkbox">
+                                <span class="slider"></span>
+                            </div>
                         </label>
                     </div>
                     <div class="setting-item">
                         <label class="setting-label">
-                            <input type="checkbox" id="showMinor" class="setting-checkbox">
-                            <span class="setting-title">Show CodeLens for Minor updates - ✴️</span>
+                            <span class="setting-title">✴️ Show CodeLens for Minor updates </span>
+                            <div class="switch">
+                                <input type="checkbox" id="showMinor" class="setting-checkbox">
+                                <span class="slider"></span>
+                            </div>
                         </label>
                     </div>
                     <div class="setting-item">
                         <label class="setting-label">
-                            <input type="checkbox" id="showMajor" class="setting-checkbox">
-                            <span class="setting-title">Show CodeLens for Major updates - 🛑</span>
+                            <span class="setting-title">🛑 Show CodeLens for Major updates </span>
+                            <div class="switch">
+                                <input type="checkbox" id="showMajor" class="setting-checkbox">
+                                <span class="slider"></span>
+                            </div>
                         </label>
                     </div>
                 </div>
+            </div>
+        `;
+
+        const warningMessage = `
+            <div class="upn-warning">
+                <p class="upn-message">⚠️ You have disabled CodeLens for the following update types:</br>
+                <strong>Update Now</strong> will not show any CodeLens for these update types.</p>
             </div>
         `;
 
@@ -538,6 +539,9 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                                     command: 'updateSettings',
                                     settings
                                 });
+                                vscode.postMessage({
+                                    command: 'focusPackageJson'
+                                });
                             });
                         }
                     });
@@ -546,119 +550,6 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                 setupSettingsListeners();
             })();`;
 
-        return `<!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Dependencies Data</title>
-            <style>
-                :root { font-size: 10px; --vscode-font-family: -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif; }
-                body { padding: 20px; color: var(--vscode-foreground); font-size: 1.3rem; font-family: var(--vscode-font-family); }
-                p { margin: 0; line-height: 1.45; word-break: break-word; }
-                .dimmed { color: var(--vscode-descriptionForeground); }
-                .update-type { display: inline-block; padding: 4px 8px 5px; border-radius: 12px; font-size: 1.2rem; font-weight: 600; line-height: 1; text-transform: uppercase; letter-spacing: 1px; color: color: var(--vscode-foreground);; border: 1px solid var(--vscode-panel-border); }
-                .update-type.patch { color: var(--vscode-minimapGutter-addedBackground); }
-                .update-type.patch::before { content:"❇️ Patch" }
-                .update-type.minor { color: var(--vscode-editorWarning-foreground); }
-                .update-type.minor::before { content:"✴️ Minor" }
-                .update-type.major { color: var(--vscode-minimapGutter-deletedBackground); }
-                .update-type.major::before { content:"🛑 Major" }
-                .update-type.latest::before { color: var(--vscode-foreground); content:"✅ Up to date packages" }
-
-                .dependency-item { margin-bottom: -1px; padding: 10px; border: 1px solid var(--vscode-panel-border); border-radius: 0; }
-                .dependency-item:first-of-type { border-radius: 4px 4px 0 0; }
-                .dependency-item:last-of-type { border-radius: 0 0 4px 4px; margin-bottom: 16px; }
-                .dependency-item strong { font-weight: 600; }
-                .upn-to-update .dependency-item:hover { background-color: var(--vscode-editor-background); cursor: pointer; }
-
-                .footer { display: flex; flex-direction: column; align-items: center; margin-bottom: 15px; }
-                .refresh-btn { padding: 4px 12px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 4px; cursor: pointer; }
-                .refresh-btn:hover { background: var(--vscode-button-hoverBackground); }
-                
-                .group-title { font-size: 1.4rem; font-weight: 600; margin: 0 0 4px 0; padding: 8px 0; background: var(--vscode-editor-lineHighlightBackground); border-radius: 4px; }
-                
-                .upn-analytics { display: flex; justify-content: space-between; margin: 10px 0 20px; border:1px solid var(--vscode-panel-border);  border-radius: 4px; background-color: var(--vscode-editor-background);  }
-                .upn-stat { display: flex; flex:1; flex-direction: column; align-items: center;  padding: 10px; }
-                .upn-analytics .label { font-size: 1.2rem; color: var(--vscode-descriptionForeground); }
-                .upn-analytics .value { margin: 0 0 1rem; font-size: 2rem; font-weight: 600; }
-                
-                .upn-title { font-size: 1.6rem; font-weight: 600; margin: 0 0 4px 0; }
-                .timestamp { font-size: 1.1rem; color: var(--vscode-descriptionForeground); }
-                
-                .upn-tab-header { display: flex; border-bottom: 1px solid var(--vscode-panel-border); }
-                .upn-tab-item { flex: 1; padding: 8px 16px; cursor: pointer; text-align: center; }
-                .upn-tab-item.is-active { border-bottom: 3px solid var(--vscode-focusBorder); }
-                .upn-stat-count { display: inline-block; min-width: 16px; font-style: normal; padding: 1px 4px 2px; line-height: 1; background: var(--vscode-editor-background); border: 1px solid var(--vscode-panel-border); border-radius: 16px; }
-                .upn-tab-contents { display: flex; }
-                .upn-tab-content { flex: 1; padding: 16px 0; display: none; }
-                .upn-tab-content.is-active { display: block; }
-
-                .history-item { padding: 6px 0; }
-                .time-group { position:relative; padding:0 0 0 16px; margin-bottom: 16px; }
-                .time-group::before { content:"" ; position: absolute; top: 12px; left: 0px; width: 8px; bottom: 0px; border: 1px dashed var(--vscode-panel-border); border-right:none; border-radius: 4px 0 0 4px; }
-                .time-group .timestamp { list-style:none; padding: 4px 0; margin-bottom: 4px; }
-                .updates-container { padding: 0; list-style: none; }
-
-                .settings-section { margin-bottom: 20px; }
-                .settings-group { display: flex; flex-wrap: wrap; }
-                .setting-item { margin: 10px; }
-                .setting-label { display: flex; align-items: center; cursor: pointer; }
-                .setting-checkbox { margin-right: 10px; }
-            </style>
-        </head>
-        <body>
-            
-            <div class="upn-tab">
-                <div class="upn-tab-header">
-                    <span class="upn-tab-item is-active">To update <i class="upn-stat-count">0</i></span>
-                    <span class="upn-tab-item">Latest <i class="upn-stat-count">0</i></span>
-                    <span class="upn-tab-item">History <i class="upn-stat-count">0</i></span>
-                </div>
-                <div class="upn-tab-contents">
-                    <div class="upn-tab-content upn-to-update is-active">
-                        <div id="available-updates"></div>
-                    </div>
-                    <div class="upn-tab-content">
-                        <div id="up-to-date"></div>
-                    </div>
-                    <div class="upn-tab-content">
-                        <p class="dimmed">Statistics (performed updates)</p>
-                        <div class="upn-analytics">
-                            <div class="upn-patches upn-stat">
-                                <h2 class="value upn-stat-patch">0</h2>
-                                <span class="label">❇️ Patch updates</span>
-                            </div>
-                            <div class="upn-minor upn-stat">
-                                <h2 class="value upn-stat-minor">0</h2>
-                                <span class="label">✴️ Minor updates</span>
-                            </div>
-                            <div class="upn-major upn-stat">
-                                <h2 class="value upn-stat-major">0</h2>
-                                <span class="label">🛑 Major updates</span>
-                            </div>
-                        </div>
-                        <div id="historic-updates"></div>
-                    </div>
-                </div>
-            </div>
-            <div class="footer">
-                <h3 class="upn-footer-title">⚙️ Update Now Settings</h3>
-                <div class="upn-footer-section">
-                    <div class="settings-section">
-                        ${settingsSection}
-                    </div>
-                </div>
-                <div class="upn-footer-section">
-                    <h4 class="upn-title">Cached Dependencies (0)</h4>
-                    <div class="timestamp"></div>
-                    <div class="upn-cache-size"></div>
-                    <button class="refresh-btn">Update packages data</button>
-                </div>
-            </div>
-
-            <script>${scriptContent}</script>
-        </body>
-        </html>`;
+        return getCacheViewTemplate(webview, this._getMediaUrl.bind(this), settingsSection, scriptContent, warningMessage);
     }
 }
