@@ -4,6 +4,21 @@ All notable changes to the "update-now" extension will be documented in this fil
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [1.0.0-alpha.0] - 2024-12-30
+
+### Added
+ 
+ - New CodeLens Insights panel to track dependency updates
+ - Historic dependency updates are now saved
+ - Configurable CodeLens for patch, minor and major updates
+ - Code and UX improvements
+
+### Changed
+ 
+ - Caching of dependencies data to reduce registry calls
+
+
+
 ## [0.0.8] - 2024-11-08
 
 ### Added

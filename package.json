@@ -11,7 +11,7 @@
     "Packages"
   ],
   "publisher": "AndyGongea",
-  "version": "0.0.8",
+  "version": "1.0.0-alpha.0",
   "engines": {
     "vscode": "^1.77.0"
   },
@@ -35,13 +35,56 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "configuration": {
+      "title": "Update Now",
+      "properties": {
+        "update-now.codeLens.patch": {
+          "type": "boolean",
+          "default": true,
+          "description": "❇️ Show CodeLens for PATCH version updates"
+        },
+        "update-now.codeLens.minor": {
+          "type": "boolean",
+          "default": true,
+          "description": "✴️ Show CodeLens for MINOR version updates"
+        },
+        "update-now.codeLens.major": {
+          "type": "boolean",
+          "default": true,
+          "description": "🛑Show CodeLens for MAJOR version updates"
+        }
+      }
+    },
     "commands": [
       {
         "command": "update-now.updateAllDependencies",
         "title": "Update all dependencies",
-        "category": "🚀 Update Now"
+        "category": "⇪ Update Now"
+      },
+      {
+        "command": "update-now.showCacheView",
+        "title": "Show Dependencies Data",
+        "category": "⇪ Update Now"
       }
     ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "update-now-cache",
+          "title": "Update Now",
+          "icon": "resources/logo-outline@2x.png"
+        }
+      ]
+    },
+    "views": {
+      "update-now-cache": [
+        {
+          "id": "dependenciesData",
+          "name": "Dependencies Data",
+          "type": "webview"
+        }
+      ]
+    },
     "codelens": {
       "languages": [
         "json"
@@ -62,24 +105,22 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
-    "lint": "eslint src --ext ts",
+    "lint": "eslint src/**/*.ts",
     "test": "node ./out/test/runTest.js"
   },
   "devDependencies": {
     "@types/glob": "^8.1.0",
-    "@types/mocha": "^10.0.4",
-    "@types/node": "16.18.60",
-    "@types/vscode": "^1.77.0",
-    "@typescript-eslint/eslint-plugin": "^6.11.0",
-    "@typescript-eslint/parser": "^6.11.0",
-    "@vscode/test-electron": "^2.3.6",
-    "eslint": "^8.54.0",
-    "glob": "^10.3.10",
-    "mocha": "^10.2.0",
-    "typescript": "^5.2.2"
+    "@types/node": "22.9.0",
+    "@types/semver": "^7.5.8",
+    "@types/vscode": "^1.95.0",
+    "@typescript-eslint/eslint-plugin": "8.14.0",
+    "@typescript-eslint/parser": "8.14.0",
+    "eslint": "9.14.0",
+    "glob": "11.0.0",
+    "typescript": "^5.7.2"
   },
   "dependencies": {
-    "axios": "1.7.7",
+    "axios": "1.7.9",
     "semver": "7.6.3"
   }
 }

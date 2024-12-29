@@ -1,58 +1,73 @@
-# Update Now - Update your dependencies
+# Update Now - Your Smart Dependency Assistant
 
-**Update Now** is a powerful Visual Studio Code extension that manages your dependency updates in an effective and efficient way. It provides multiple update actions for the dependencies specified in your `package.json` file, making it an essential tool for modern software development.
+**Update Now** transforms dependency management in Visual Studio Code into a delightful experience. With just one click in your `package.json`, you can view and apply updates while getting rich insights about your dependencies through a beautiful dedicated panel.
 
 ![update-now-vscode-extensions-update-dependencies](https://github.com/andygongea/update-now/assets/818805/2bed1cfa-3748-47cb-949d-dd33941c6b64)
-*This extension and the content on this page were written together with ChatGPT. Prompts by* **Andy Gongea😁**
+*This extension and the content on this page were written together with ChatGPT, Cursor, Windsurf and ClaudeAI. Prompts by* **Andy Gongea😁**
 
-## Features
+## ✨ Key Features
 
-1. ❇️ **Patch Update**: Shows the latest patch updates for your dependencies. Patch updates generally include bug fixes and are fully backward compatible.
-2. ✴️ **Minor Update**: Reveals the latest minor updates for your dependencies. Minor updates typically introduce new features but are designed to be backward compatible.
-3. 🛑 **Major Update**: Displays the latest major updates for your dependencies. Major updates can make changes that are not backward compatible and may require additional modifications in your project.
+### 🎯 One-Click Updates
+- **Direct in package.json**: Update dependencies right where you see them with intuitive CodeLens
+- **Batch Updates**: Update multiple dependencies at once with our smart grouping
+- **Visual Feedback**: Clear indicators show update status and progress
 
-## Importance of Updating Dependencies
-![update-now-vscode-extensions](https://github.com/andygongea/update-now/assets/818805/703334ce-6d38-41dc-8af7-9accadc0c6d0)
-
-Updating dependencies to their latest version is crucial in software development for several reasons:
-
-1. 🐞 **Bug Fixes**: Updates usually include fixes for bugs found in previous versions, leading to more stable and reliable software.
-2. 🏃‍♀️ **Performance Improvements**: New versions of dependencies can include optimizations that improve performance, making your software faster and more efficient.
-3. 🆕 **New Features**: Updates may introduce new features, enabling your software to do more and stay competitive.
-4. 🔒 **Security**: Updates often include patches for security vulnerabilities. Keeping dependencies updated ensures your software remains secure against known issues.
+### 📊 Rich Insights Panel
+- **Dependency Overview**: See all your dependencies and their status at a glance
+- **Update History**: Track when and what was updated
+- **Dependency Analytics**: Understand update patterns and maintain a healthy codebase
 
 
-*It is essential that after every update, developers rigorously test their code to ensure the updates have not caused any regressions or issues. Proper testing allows developers to take advantage of the benefits of updates while minimizing any potential risks.*
+### 🎨 Customizable Experience
+- **Configurable CodeLens**: Choose which update types to show (patch/minor/major)
+- **Streamlined Navigation**: The dedicated panel provides easy navigation toward specific dependencies
 
-## Installation
+## Why You'll Love It
 
-You can install this extension from the Visual Studio Code Marketplace. Search for ["Update Now"](https://marketplace.visualstudio.com/search?term=update%20now&target=VSCode&category=All%20categories&sortBy=Relevance).
+1. 🚀 **Effortless Updates**
+   - See available updates directly in your code
+   - Apply updates with a single click
+   - No more CLI commands needed
 
-## Usage
+2. 📈 **Smart Insights**
+   - Track update history
+   - Monitor dependency health
+   - Make informed update decisions
 
-Open your `package.json` file within Visual Studio Code. Update Now will identify the dependencies and display update actions as code lenses.
+3. ⚡ **Maximum Productivity**
+   - Save time with batch updates
+   - Stay informed with real-time notifications
+   - Reduce update-related issues
 
-### How do I update a dependency?
+## Getting Started
 
-Each dependency can be updated individually, depending on your project's needs and requirements.
-1. Open `package.json` file
-2. Scroll down to the dependencies list
-3. Click on the Codelens (annotation on top of the package name)
-4. Run `npm install`.
+1. Install from [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=AndyGongea.update-now)
+2. Open any `package.json` file
+3. Look for the CodeLens indicators above your dependencies
+4. Click to update or open the insights panel
 
-### How do I update all outdated dependencies?
+## Powerful Features in Action
 
-There is a global update command and action to update all dependencies simultaneously.
-1. The command can be executed by searching for it in the Command Pallete:  
-  - **🚀 Update now: Update all dependencies**.
-2. The second option is the code lens that is at the top of each package.json file: 
-  - **Update now: 25 available updates (❇️ 5 x patch, ✴️ 10 x minor, 🛑 5 x major)**
+### Smart CodeLens
+- ❇️ **Patch Updates**: Quick, safe bug fixes
+- ✴️ **Minor Updates**: New features (backward compatible)
+- 🛑 **Major Updates**: Breaking changes with detailed info
 
-### Which are the supported package managers?
-For now, the only package manager supported is NPM. There is a work in progress to support multiple package managers, the upcoming one being Packagist for the PHP ecosystem.
+### Rich Insights Panel
+- 📊 Dependency status overview
+- 📈 Update history graphs
+- 🔍 Detailed dependency information
+- ⚡ Performance impact analysis
 
-![npm-logo](https://github.com/andygongea/update-now/assets/818805/d05e2127-af59-4cf2-b33e-d755d42a1dd2)
+## Support
 
-### Wanna suggest a new feature/package manager?
-Ask for a new feature or enhancement by starting a new discussion: ["Request feature"](https://github.com/andygongea/update-now/discussions/new?category=ideas)
+- [Report Issues](https://github.com/andygongea/update-now/issues)
+- [Request Features](https://github.com/andygongea/update-now/discussions/new?category=ideas)
+- [Visit Website](https://gongea.com)
 
+## License
+
+Released under the [ICS License](LICENSE).
+
+---
+*Last updated: December 30, 2024*

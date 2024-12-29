@@ -5,72 +5,98 @@ import { showUpdateAllNotification } from "./commands/showUpdateAllNotification"
 import { debounce } from "./utils/debounce";
 import { getUpdateType } from "./utils/getUpdateType";
 import { getVersionPrefix } from "./utils/getVersionPrefix";
-import { VersionInfo } from "./utils/types";
+import { VersionInfo, IDependencyData, UpdateType } from "./utils/types";
 import semver from "semver";
 import { incrementUpgradeCount } from "./utils/incrementUpgradeCount";
+import { getPosition } from "./utils/getPosition";
+import { CacheViewProvider } from './webview/main/CacheViewProvider';
+import { logger } from './utils/logger';
+import { isURL } from './utils/isURL';
 
 const ONE_DAY_IN_MS = 24 * 60 * 60 * 1000;
-
-interface DependencyData {
-  version: string | null;
-  description?: string;
-  author?: string;
-  timestamp: number;
-  updateType?: "major" | "minor" | "patch" | "latest" | "invalid" | "invalid latest" | "url";
-}
 
 class DependencyCodeLensProvider implements vscode.CodeLensProvider {
   private _onDidChangeCodeLenses: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
   public readonly onDidChangeCodeLenses: vscode.Event<void> = this._onDidChangeCodeLenses.event;
 
   private promises: Promise<any>[] = [];
-  private dependenciesData: Record<string, DependencyData> = {};
+  private dependenciesData: Record<string, IDependencyData> = {};
 
-  constructor(private context: vscode.ExtensionContext) {}
+  constructor(private context: vscode.ExtensionContext) { }
+
+  private async validateAndUpdateDependencies(
+    document: vscode.TextDocument,
+    dependencies: Record<string, string>,
+    storedDependencies: Record<string, IDependencyData>
+  ): Promise<void> {
+    const currentTime = Date.now();
+    const updatePromises: Promise<any>[] = [];
+
+    for (const [packageName, currentVersion] of Object.entries(dependencies)) {
+      const storedDependency = storedDependencies[packageName];
+      const needsUpdate = !storedDependency || 
+                         currentTime - storedDependency.timestamp >= ONE_DAY_IN_MS || 
+                         storedDependency.version === null;
+
+      if (needsUpdate) {
+        updatePromises.push(this.updateDependencyData(document, packageName, currentVersion));
+      } else {
+        this.updateStoredDependency(packageName, currentVersion, storedDependency);
+      }
+    }
+
+    if (updatePromises.length > 0) {
+      await Promise.all(updatePromises);
+      await this.context.workspaceState.update('dependenciesData', this.dependenciesData);
+    }
+  }
+
+  private updateStoredDependency(
+    packageName: string, 
+    currentVersion: string, 
+    storedDependency: IDependencyData
+  ): void {
+    const updatedData = {
+      ...storedDependency,
+      updateType: getUpdateType(currentVersion, storedDependency.version || '') as UpdateType
+    };
+    
+    this.dependenciesData[packageName] = updatedData;
+  }
 
   async provideCodeLenses(document: vscode.TextDocument): Promise<vscode.CodeLens[]> {
     const codeLenses: vscode.CodeLens[] = [];
 
-    if (isPackageJson(document)) {
-      const packageJson = JSON.parse(document.getText());
-      const dependencies = packageJson.dependencies || {};
-      const devDependencies = packageJson.devDependencies || {};
-
-      const storedDependencies = this.context.workspaceState.get<Record<string, DependencyData>>('dependenciesData', {});
-
-      if (Object.keys(storedDependencies).length !== 0) {
-        this.dependenciesData = storedDependencies;
-      }
-
-      const currentTime = Date.now();
-      for (const packageName in { ...dependencies, ...devDependencies }) {
-        const currentVersion = dependencies[packageName] || devDependencies[packageName];
-        const storedDependency = storedDependencies[packageName];
-        if (!storedDependency || currentTime - storedDependency.timestamp >= ONE_DAY_IN_MS || storedDependency.version === null) {
-          this.promises.push(this.updateDependencyData(document, packageName, currentVersion));
-        } else {
-          this.dependenciesData[packageName] = storedDependency;
-        }
-      }
-
-      if (this.promises.length > 0) {
-        await Promise.all(this.promises);
-        await this.context.workspaceState.update('dependenciesData', this.dependenciesData);
-      }
-
-      this.addCodeLenses(codeLenses, document);
+    if (!isPackageJson(document)) {
+      return codeLenses;
     }
 
-    return codeLenses;
+    try {
+      const packageJson = JSON.parse(document.getText());
+      const allDependencies = {
+        ...packageJson.dependencies || {},
+        ...packageJson.devDependencies || {}
+      };
+
+      const storedDependencies = this.context.workspaceState.get<Record<string, IDependencyData>>('dependenciesData', {});
+      this.dependenciesData = Object.keys(storedDependencies).length !== 0 ? storedDependencies : {};
+
+      await this.validateAndUpdateDependencies(document, allDependencies, storedDependencies);
+      this.addCodeLenses(codeLenses, document);
+
+      return codeLenses;
+    } catch (error) {
+      console.error(`[⇪ Update Now] Error in provideCodeLenses:`, error);
+      return codeLenses;
+    }
   }
 
   private async updateDependencyData(document: vscode.TextDocument, packageName: string, currentVersion: string) {
     if (!currentVersion) {
-      console.warn(`Current version for package ${packageName} is undefined.`);
+      console.warn(`[⇪ Update Now] ` + `Current version for package ${packageName} is undefined.`);
       return;
     }
 
-    // Use the updated `getLatestVersion` which now has caching logic
     const latestVersionData = await getLatestVersion(packageName);
     if (!latestVersionData) { return; };
 
@@ -83,7 +109,7 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
       description: latestVersionData.description,
       author: latestVersionData.author?.name || "various contributors",
       timestamp: Date.now(),
-      updateType,
+      updateType: updateType as UpdateType,
     };
 
     return {
@@ -104,6 +130,12 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
     let minors = 0;
     let majors = 0;
 
+    // Get configuration settings
+    const config = vscode.workspace.getConfiguration('update-now.codeLens');
+    const showPatch = config.get<boolean>('patch', true);
+    const showMinor = config.get<boolean>('minor', true);
+    const showMajor = config.get<boolean>('major', true);
+
     for (const packageName in deps) {
       const { version, description, author, updateType } = deps[packageName];
       const packageJson = JSON.parse(document.getText());
@@ -119,6 +151,13 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
       if (line === -1) { continue; }
 
       if (updateType !== "latest" && currentVersion !== "latest") {
+        // Skip if the update type is disabled in settings
+        if ((updateType === "patch" && !showPatch) ||
+            (updateType === "minor" && !showMinor) ||
+            (updateType === "major" && !showMajor)) {
+          continue;
+        }
+
         const range = new vscode.Range(line, character, line, character);
         let title = "";
         let tooltip = `📦 ${packageName} \n  ├  by ${author} \n  ╰  ${description}  \n \n  •  ${packageName}@${currentVersion} (current version) \n  •  ${packageName}@${latestVersion} (latest version) \n \n`;
@@ -149,7 +188,24 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
     }
 
     const summaryRange = new vscode.Range(0, 0, 0, 0);
+    
+    // Handle disabled CodeLens notification
+    const disabledTypes = [];
+    if (!showPatch) {disabledTypes.push("patch");}
+    if (!showMinor) {disabledTypes.push("minor");}
+    if (!showMajor) {disabledTypes.push("major");}
+
     if (patches + minors + majors > 0) {
+      // Add disabled types notification if any
+      if (disabledTypes.length > 0) {
+        codeLenses.unshift(
+          new vscode.CodeLens(summaryRange, {
+            title: `⚠️ You have disabled codeLens for ${disabledTypes.join(" and ")} updates.`,
+            tooltip: "You can enable these update types in settings",
+            command: ""
+          })
+        );
+      }
       const summaryTitle = `Update Now: ${patches + minors + majors
         } updates available (❇️ ${patches} x patch, ✴️ ${minors} x minor, 🛑 ${majors} x major)`;
 
@@ -160,26 +216,57 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
           command: "update-now.showNotification",
         })
       );
+
     } else {
-      codeLenses.unshift(
-        new vscode.CodeLens(summaryRange, {
-          title: "Congrats! 🙌 Your dependencies are up to date.",
-          command: "",
-        })
-      );
+      // When no updates are available or all types are disabled
+      if (disabledTypes.length === 3) {
+        // All update types are disabled
+        codeLenses.unshift(
+          new vscode.CodeLens(summaryRange, {
+            title: "Congrats! 🙌 Your dependencies are up to date.",
+            command: ""
+          }),
+          new vscode.CodeLens(summaryRange, {
+            title: "⚠️ You have disabled codeLens for patches, minor and major updates.",
+            tooltip: "You can enable these update types in settings",
+            command: ""
+          })
+        );
+      } else {
+        // No updates available but some types are enabled
+        codeLenses.unshift(
+          new vscode.CodeLens(summaryRange, {
+            title: "Congrats! 🙌 Your dependencies are up to date.",
+            command: ""
+          })
+        );
+        
+        if (disabledTypes.length > 0) {
+          codeLenses.unshift(
+            new vscode.CodeLens(summaryRange, {
+              title: `⚠️ You have disabled codeLens for ${disabledTypes.join(" and ")} updates.`,
+              tooltip: "You can enable these update types in settings",
+              command: ""
+            })
+          );
+        }
+      }
     }
   }
 
   refreshCodeLenses = debounce(async (document: vscode.TextDocument) => {
+    // Just trigger the CodeLens refresh without clearing cache
     this._onDidChangeCodeLenses.fire();
+    
+    // Reset only the promises array for new checks
     this.promises = [];
-    this.dependenciesData = {};
-    await this.context.workspaceState.update('dependenciesData', {});
+    
+    // Let provideCodeLenses handle cache validation
     await this.provideCodeLenses(document);
   }, 50);
 }
 
-async function updateDependency(context: vscode.ExtensionContext, documentUri: vscode.Uri, packageName: string, latestVersion: string): Promise<void> {
+async function updateDependency(this: any, context: vscode.ExtensionContext, documentUri: vscode.Uri, packageName: string, latestVersion: string, showNotification: boolean = true): Promise<void> {
   const document = await vscode.workspace.openTextDocument(documentUri);
   const text = document.getText();
   const packageJson = JSON.parse(text);
@@ -190,11 +277,29 @@ async function updateDependency(context: vscode.ExtensionContext, documentUri: v
     return;
   }
 
-  const isMajorUpdate = semver.diff(latestVersion, currentVersion.replace(/^[~^]/, "")) === "major";
+  // Clean versions for comparison
+  const cleanCurrentVersion = currentVersion.replace(/^[~^]/, "");
+  const cleanLatestVersion = latestVersion.replace(/^[~^]/, "");
+
+  if (!cleanLatestVersion) {
+    vscode.window.showErrorMessage(`Invalid version format: ${latestVersion}`);
+    return;
+  }
+
+  // Compare clean versions
+  const isMajorUpdate = semver.diff(cleanLatestVersion, cleanCurrentVersion) === "major";
   const versionPrefix = getVersionPrefix(currentVersion);
-  let updatedVersion = latestVersion;
+  
+  // Only apply prefix if it's not a major update and we had a prefix before
+  let updatedVersion = cleanLatestVersion;
   if (!isMajorUpdate && versionPrefix) {
-    updatedVersion = versionPrefix + updatedVersion;
+    // Validate the version with prefix is valid
+    const prefixedVersion = versionPrefix + cleanLatestVersion;
+    if (!semver.validRange(prefixedVersion)) {
+      vscode.window.showErrorMessage(`Invalid version format after applying prefix: ${prefixedVersion}`);
+      return;
+    }
+    updatedVersion = prefixedVersion;
   }
 
   if (packageJson.dependencies[packageName]) {
@@ -209,136 +314,155 @@ async function updateDependency(context: vscode.ExtensionContext, documentUri: v
   await vscode.workspace.applyEdit(edit);
   await document.save();
 
-  const storedDependencies = context.workspaceState.get<Record<string, DependencyData>>('dependenciesData', {});
+  const storedDependencies = context.workspaceState.get<Record<string, IDependencyData>>('dependenciesData', {});
   storedDependencies[packageName] = {
     ...storedDependencies[packageName],
     version: latestVersion,
     timestamp: Date.now(),
-    updateType: "latest",
+    updateType: UpdateType.latest,
   };
   await context.workspaceState.update('dependenciesData', storedDependencies);
 
   await incrementUpgradeCount(context);
 
-  vscode.window.showInformationMessage(`Awesome! 📦 ${packageName} has been updated to version: ${latestVersion}.`);
-}
+  // Get existing tracking data and ensure it's an array
+  let existingData = context.workspaceState.get('trackUpdate') as any;
+  if (!Array.isArray(existingData)) {
+    existingData = existingData ? [existingData] : [];
+  }
+  
+  // Add new update to the array
+  await context.workspaceState.update('trackUpdate', [
+    ...existingData,
+    {
+      packageName,
+      currentVersion,
+      latestVersion,
+      updateType: getUpdateType(currentVersion, latestVersion),
+      timestamp: Date.now()
+    }
+  ]);
 
-function getPosition(document: vscode.TextDocument, packageName: string) {
-  const regex = new RegExp(`"${packageName}"\\s*:`);
-  const line = document
-    .getText()
-    .split("\n")
-    .findIndex((line) => regex.test(line));
-  const character = document.lineAt(line).text.indexOf(`"${packageName}":`);
+  // Refresh the cache webview
+  if (cacheViewProvider) {
+    try {
+      cacheViewProvider.refresh();
+    } catch (error) {
+      console.error('Failed to refresh cache view:', error);
+    }
+  }
 
-  return { line, character };
+  if (showNotification) {
+    vscode.window.showInformationMessage(`Awesome! 📦 ${packageName} has been updated to version: ${latestVersion}.`);
+  }
 }
 
 async function updateAllDependencies(context: vscode.ExtensionContext, documentUri: vscode.Uri): Promise<void> {
+  logger.info('Starting update all dependencies process');
   const document = await vscode.workspace.openTextDocument(documentUri);
   const packageJson = JSON.parse(document.getText());
   const dependencies = packageJson.dependencies || {};
   const devDependencies = packageJson.devDependencies || {};
+  const storedDependencies = context.workspaceState.get<Record<string, IDependencyData>>('dependenciesData', {});
   const dependenciesToUpdate: string[] = [];
 
-  const storedDependencies = context.workspaceState.get<Record<string, DependencyData>>('dependenciesData', {});
+  logger.debug('Initial package.json state:', { dependencies, devDependencies });
 
   for (const packageName in { ...dependencies, ...devDependencies }) {
-    const currentVersion = dependencies[packageName] || devDependencies[packageName];
-    const versionPrefix = getVersionPrefix(currentVersion);
-    const strippedCurrentVersion = currentVersion.replace(/^[~^]/, "");
-    const latestVersionData = storedDependencies[packageName] && Date.now() - storedDependencies[packageName].timestamp < ONE_DAY_IN_MS
-      ? storedDependencies[packageName]
-      : (await getLatestVersion(packageName)) as VersionInfo | null;
-
-    const isURL = (currentVersion: string) => /^https?:/.test(currentVersion) || /^git(\+ssh|\+https|\+file)?:/.test(currentVersion) || /^git@/.test(currentVersion) || /^[^\/]+\/[^\/]+$/.test(currentVersion);
-
-    if (latestVersionData && latestVersionData.version && semver.valid(latestVersionData.version) && !isURL(currentVersion)) {
-      const diff = semver.diff(latestVersionData.version, strippedCurrentVersion);
-      const isPatchUpdate = diff === "patch";
-      const isMinorUpdate = diff === "minor";
-
-      let newVersion = latestVersionData.version;
-      if (versionPrefix === "~" && isPatchUpdate) {
-        newVersion = "~" + newVersion;
-      } else if (versionPrefix === "^" && (isPatchUpdate || isMinorUpdate)) {
-        newVersion = "^" + newVersion;
+    try {
+      logger.info(`Processing package: ${packageName}`);
+      const currentVersion = dependencies[packageName] || devDependencies[packageName];
+      
+      if (isURL(currentVersion)) {
+        logger.info(`Skipping ${packageName} - URL dependency`);
+        continue;
       }
 
-      if (newVersion !== currentVersion) {
-        dependenciesToUpdate.push(packageName);
-        if (dependencies[packageName]) {
-          packageJson.dependencies[packageName] = newVersion;
-        } else if (devDependencies[packageName]) {
-          packageJson.devDependencies[packageName] = newVersion;
+      const latestVersionData = storedDependencies[packageName] && Date.now() - storedDependencies[packageName].timestamp < ONE_DAY_IN_MS
+        ? storedDependencies[packageName]
+        : (await getLatestVersion(packageName)) as VersionInfo | null;
+
+      logger.debug(`Latest version data for ${packageName}:`, latestVersionData);
+
+      if (latestVersionData?.version && semver.valid(latestVersionData.version)) {
+        const strippedCurrentVersion = currentVersion.replace(/^[~^]/, "");
+        if (latestVersionData.version !== strippedCurrentVersion) {
+          logger.info(`Update found for ${packageName}: ${currentVersion} -> ${latestVersionData.version}`);
+          dependenciesToUpdate.push(packageName);
+          await updateDependency(context, documentUri, packageName, latestVersionData.version, false);
+        } else {
+          logger.info(`No update needed for ${packageName}`);
         }
-        storedDependencies[packageName] = {
-          version: newVersion,
-          timestamp: Date.now(),
-          updateType: "latest",
-        };
+      } else {
+        logger.info(`Skipping ${packageName} - invalid version data`);
       }
+    } catch (error) {
+      logger.error(`Error processing package ${packageName}`, error);
     }
   }
 
-  if (dependenciesToUpdate.length !== 0) {
-    const updatedText = JSON.stringify(packageJson, null, 2);
-    const edit = new vscode.WorkspaceEdit();
-    edit.replace(document.uri, new vscode.Range(document.positionAt(0), document.positionAt(document.getText().length)), updatedText);
-    await vscode.workspace.applyEdit(edit);
-    await document.save();
-
-    await context.workspaceState.update('dependenciesData', storedDependencies);
-    await incrementUpgradeCount(context);
-
-    vscode.window.showInformationMessage("Yay! 🥳 All dependencies have been updated to their latest version.");
-  } else {
+  logger.info(`Processed ${dependenciesToUpdate.length} dependencies`);
+  
+  if (dependenciesToUpdate.length === 0) {
+    logger.info('No dependencies need updating');
     vscode.window.showInformationMessage("All dependencies are up to date.");
+  } else {
+    logger.info('Successfully updated all dependencies');
+    vscode.window.showInformationMessage(`🎩 Congrats! You just updated ${dependenciesToUpdate.length} dependencies to their latest versions. Please ensure you code still runs as intended.`);
   }
+  logger.show();
 }
+
+let cacheViewProvider: CacheViewProvider;
 
 export function activate(context: vscode.ExtensionContext): void {
   context.globalState.update("dependencyUpgradeCount", 0);
 
-  context.subscriptions.push(
-    vscode.commands.registerCommand("update-now.updateDependency", async (documentUri, packageName, latestVersion) => {
-      await updateDependency(context, documentUri, packageName, latestVersion);
-    })
-  );
+  const provider = new DependencyCodeLensProvider(context);
+  cacheViewProvider = new CacheViewProvider(context.extensionUri, context);
 
-  const updateAllDependenciesCommand = vscode.commands.registerCommand("update-now.updateAllDependencies", async () => {
-    const editor = vscode.window.activeTextEditor;
-    if (editor && isPackageJson(editor.document)) {
-      await updateAllDependencies(context, editor.document.uri);
+  vscode.workspace.findFiles('**/package.json', '**/node_modules/**').then(async (packageJsonFiles) => {
+    if (packageJsonFiles.length > 0) {
+      const document = await vscode.workspace.openTextDocument(packageJsonFiles[0]);
+      provider.refreshCodeLenses(document);
     }
   });
 
-  context.subscriptions.push(updateAllDependenciesCommand);
-
-  const codeLensProvider = new DependencyCodeLensProvider(context);
-  const selector: vscode.DocumentSelector = [
-    { language: "json", pattern: "**/package.json" },
-    { language: "jsonc", pattern: "**/package.json" },
-  ];
-
-  context.subscriptions.push(vscode.languages.registerCodeLensProvider(selector, codeLensProvider));
-
   context.subscriptions.push(
-    vscode.workspace.onDidSaveTextDocument(async (document: vscode.TextDocument) => {
-      if (isPackageJson(document)) {
-        codeLensProvider.refreshCodeLenses(document);
+    vscode.languages.registerCodeLensProvider({ language: 'json', pattern: '**/package.json' }, provider),
+    vscode.window.registerWebviewViewProvider(CacheViewProvider.viewType, cacheViewProvider),
+    cacheViewProvider,
+    vscode.commands.registerCommand("update-now.updateDependency", async (documentUri, packageName, latestVersion) => {
+      await updateDependency(context, documentUri, packageName, latestVersion);
+    }),
+    vscode.commands.registerCommand("update-now.updateAllDependencies", async () => {
+      const editor = vscode.window.activeTextEditor;
+      if (editor) {
+        await updateAllDependencies(context, editor.document.uri);
       }
-    })
-  );
-
-  context.subscriptions.push(
+    }),
     vscode.commands.registerCommand("update-now.showNotification", () => {
       const editor = vscode.window.activeTextEditor;
       if (editor && isPackageJson(editor.document)) {
         showUpdateAllNotification();
       }
+    }),
+    vscode.commands.registerCommand("update-now.showCacheView", async () => {
+      try {
+        await vscode.commands.executeCommand('workbench.view.dependenciesData');
+      } catch (error) {
+        console.error('[⇪ Update Now] Failed to show cache view:', error);
+      }
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.workspace.onDidSaveTextDocument(async (document: vscode.TextDocument) => {
+      if (isPackageJson(document)) {
+        provider.refreshCodeLenses(document);
+      }
     })
   );
 }
 
-export function deactivate(): void {}
+export function deactivate(): void { }

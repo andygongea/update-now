@@ -1,0 +1,82 @@
+:root { font-size: 10px; --vscode-font-family: -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif; }
+body { padding: 0; color: var(--vscode-foreground); font-size: 1.3rem; font-family: var(--vscode-font-family); }
+p { margin: 0; line-height: 1.45; word-break: break-word; }
+.dimmed { color: var(--vscode-descriptionForeground); }
+
+/* Header styles */
+.upn-header { padding: 10px 20px; }
+.upn-heading { display: flex; align-items: center; gap: 8px; font-size: 2rem; font-weight: 600; margin: 0; }
+.upn-logo { width: 32px; height: 32px; background: url('../../../resources/logo-colored.svg') no-repeat center center; background-size: contain; display: inline-block; }
+.upn-warning { padding: 8px 12px; border: 1px solid var(--vscode-panel-border); border-radius: 4px; margin-top:1rem; background: var(--vscode-editor-background);  }
+.upn-warning .upn-message { line-height:1.6; }
+
+.upn-empty-state { display: flex; flex-direction: column; align-items: center; padding: 20px; border: 2px dashed var(--vscode-panel-border); border-radius: 4px; margin:2rem;  }
+.upn-empty-state .upn-icon { font-size: 3.2rem; margin:1rem 0;  }
+
+.update-type { display: inline-block; padding: 4px 8px 5px; border-radius: 12px; font-size: 1.2rem; font-weight: 600; line-height: 1; text-transform: uppercase; letter-spacing: 1px; color: var(--vscode-foreground);; border: 1px solid var(--vscode-panel-border); }
+.update-type.patch { color: var(--vscode-minimapGutter-addedBackground); }
+.update-type.patch::before { content:"❇️ Patch" }
+.update-type.minor { color: var(--vscode-editorWarning-foreground); }
+.update-type.minor::before { content:"✴️ Minor" }
+.update-type.major { color: var(--vscode-minimapGutter-deletedBackground); }
+.update-type.major::before { content:"🛑 Major" }
+.update-type.latest::before { color: var(--vscode-foreground); content:"✅ Up to date packages" }
+
+.dependency-item { margin-bottom: -1px; padding: 10px; border: 1px solid var(--vscode-panel-border); border-radius: 0; }
+.dependency-item:first-of-type { border-radius: 4px 4px 0 0; }
+.dependency-item:last-of-type { border-radius: 0 0 4px 4px; margin-bottom: 16px; }
+.dependency-item strong { font-weight: 600; }
+.upn-to-update .dependency-item:hover { background-color: var(--vscode-editor-background); cursor: pointer; }
+
+.group-title,.settings-title { position: relative; font-size: 1.4rem; font-weight: 600; margin: 0 0 4px 0; padding: 8px 0; background: var(--vscode-editor-lineHighlightBackground); border-radius: 4px; }
+.settings-title::after { position: absolute; content: ""; top: 19px; right: 0; left: 0; height: 1px; background-image: linear-gradient(90deg, transparent 120px, var(--vscode-panel-border));}
+
+.upn-analytics { display: flex; justify-content: space-between; margin: 10px 0 20px; border:1px solid var(--vscode-panel-border);  border-radius: 4px; background-color: var(--vscode-editor-background);  }
+.upn-stat { display: flex; flex:1; flex-direction: column; align-items: center;  padding: 10px; }
+.upn-analytics .label { font-size: 1.2rem; color: var(--vscode-descriptionForeground); }
+.upn-analytics .value { margin: 0 0 1rem; font-size: 2rem; font-weight: 600; }
+
+.upn-title { font-weight: 600; margin: 0 0 4px 0; }
+.timestamp { font-size: 1.1rem; color: var(--vscode-descriptionForeground); }
+
+.upn-tab { padding: 10px 20px; }
+.upn-tab-header { display: flex; border-bottom: 1px solid var(--vscode-panel-border); }
+.upn-tab-item { flex: 1; padding: 8px 16px; cursor: pointer; text-align: center; }
+.upn-tab-item.is-active { border-bottom: 3px solid var(--vscode-focusBorder); }
+.upn-stat-count { display: inline-block; min-width: 16px; font-style: normal; padding: 1px 4px 2px; line-height: 1; background: var(--vscode-editor-background); border: 1px solid var(--vscode-panel-border); border-radius: 16px; }
+.upn-tab-contents { display: flex; }
+.upn-tab-content { flex: 1; padding: 16px 0; display: none; }
+.upn-tab-content.is-active { display: block; }
+
+.history-item { padding: 6px 0; }
+.time-group { position:relative; padding:0 0 0 16px; margin-bottom: 16px; }
+.time-group::before { content:"" ; position: absolute; top: 12px; left: 0px; width: 8px; bottom: 0px; border: 1px dashed var(--vscode-panel-border); border-right:none; border-radius: 4px 0 0 4px; }
+.time-group .timestamp { list-style:none; padding: 4px 0; margin-bottom: 4px; }
+.updates-container { padding: 0; list-style: none; }
+
+/* Switch styles */
+.switch { position: relative; display: inline-block; width: 50px; height: 20px; flex-shrink: 0; }
+.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; border: 1px solid ar(--vscode-input-background); transition: .2s; border-radius: 20px; border: 1px solid var(--vscode-panel-border); }
+.slider::before { position: absolute; content: ""; height: 14px; width: 14px; left: 2px; bottom: 2px; background-color: var(--vscode-foreground); transition: .2s; border-radius: 50%; z-index: 2; }
+.slider::after { position: absolute; content: "OFF"; right: 6px; bottom: 2px; padding:0 2px; color: var(--vscode-foreground); font-size: 11px; font-weight: bold; transition: .2s; }
+.setting-checkbox:checked + .slider { background-color: var(--vscode-button-background); border-color: var(--vscode-button-background); }
+.setting-checkbox:checked + .slider::before { transform: translateX(30px); background-color: var(--vscode-button-foreground); }
+.setting-checkbox:checked + .slider::after { content: "ON"; right: initial; left: 6px; padding:0 2px; color: var(--vscode-button-foreground); }
+.setting-checkbox:focus + .slider { box-shadow: 0 0 1px var(--vscode-button-background); }
+
+/* Footer styles */
+.upn-footer { display: flex; flex-direction: column; padding:20px; background-color: rgba(0,0,0,.1); border-top: 1px solid var(--vscode-panel-border); margin-bottom: 15px; }
+.upn-footer-title { width:100%; margin-top:0; text-align: left; }
+.upn-footer-section { width:100%; }
+
+.settings-section { margin-bottom: 20px; }
+.settings-group { display: flex; flex-direction: column; gap: 12px; }
+.setting-item { margin: 0; }
+.setting-label { display: flex; align-items: center; cursor: pointer; gap: 12px; }
+.setting-checkbox { display: none; }
+.setting-title { font-size: 1.3rem; }
+
+
+
+
+.is-hidden { display: none; }

@@ -1,0 +1,22 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0_43_27)">
+<circle cx="32" cy="32" r="31" stroke="white" stroke-opacity="0.2" stroke-width="2"/>
+<circle cx="32" cy="32" r="32" fill="url(#paint0_linear_43_27)"/>
+<circle cx="32" cy="32" r="31" stroke="white" stroke-opacity="0.2" stroke-width="2"/>
+<rect x="24" y="45" width="16" height="8" fill="white" fill-opacity="0.25" stroke="white" stroke-width="4"/>
+<mask id="path-5-inside-1_43_27" fill="white">
+<path fill-rule="evenodd" clip-rule="evenodd" d="M42 28H52L32 8L12 28H22V39H42V28Z"/>
+</mask>
+<path fill-rule="evenodd" clip-rule="evenodd" d="M42 28H52L32 8L12 28H22V39H42V28Z" fill="white" fill-opacity="0.25"/>
+<path d="M52 28V32H61.6569L54.8284 25.1716L52 28ZM42 28V24H38V28H42ZM32 8L34.8284 5.17157L32 2.34315L29.1716 5.17157L32 8ZM12 28L9.17157 25.1716L2.34315 32H12V28ZM22 28H26V24H22V28ZM22 39H18V43H22V39ZM42 39V43H46V39H42ZM52 24H42V32H52V24ZM29.1716 10.8284L49.1716 30.8284L54.8284 25.1716L34.8284 5.17157L29.1716 10.8284ZM14.8284 30.8284L34.8284 10.8284L29.1716 5.17157L9.17157 25.1716L14.8284 30.8284ZM22 24H12V32H22V24ZM26 39V28H18V39H26ZM42 35H22V43H42V35ZM38 28V39H46V28H38Z" fill="white" mask="url(#path-5-inside-1_43_27)"/>
+</g>
+<defs>
+<linearGradient id="paint0_linear_43_27" x1="32" y1="0" x2="32" y2="64" gradientUnits="userSpaceOnUse">
+<stop stop-color="#FF0000"/>
+<stop offset="1" stop-color="#FF9900"/>
+</linearGradient>
+<clipPath id="clip0_43_27">
+<rect width="64" height="64" fill="white"/>
+</clipPath>
+</defs>
+</svg>
