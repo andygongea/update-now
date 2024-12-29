@@ -188,7 +188,24 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
     }
 
     const summaryRange = new vscode.Range(0, 0, 0, 0);
+    
+    // Handle disabled CodeLens notification
+    const disabledTypes = [];
+    if (!showPatch) {disabledTypes.push("patch");}
+    if (!showMinor) {disabledTypes.push("minor");}
+    if (!showMajor) {disabledTypes.push("major");}
+
     if (patches + minors + majors > 0) {
+      // Add disabled types notification if any
+      if (disabledTypes.length > 0) {
+        codeLenses.unshift(
+          new vscode.CodeLens(summaryRange, {
+            title: `⚠️ You have disabled codeLens for ${disabledTypes.join(" and ")} updates.`,
+            tooltip: "You can enable these update types in settings",
+            command: ""
+          })
+        );
+      }
       const summaryTitle = `Update Now: ${patches + minors + majors
         } updates available (❇️ ${patches} x patch, ✴️ ${minors} x minor, 🛑 ${majors} x major)`;
 
@@ -199,13 +216,41 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
           command: "update-now.showNotification",
         })
       );
+
     } else {
-      codeLenses.unshift(
-        new vscode.CodeLens(summaryRange, {
-          title: "Congrats! 🙌 Your dependencies are up to date.",
-          command: "",
-        })
-      );
+      // When no updates are available or all types are disabled
+      if (disabledTypes.length === 3) {
+        // All update types are disabled
+        codeLenses.unshift(
+          new vscode.CodeLens(summaryRange, {
+            title: "Congrats! 🙌 Your dependencies are up to date.",
+            command: ""
+          }),
+          new vscode.CodeLens(summaryRange, {
+            title: "⚠️ You have disabled codeLens for patches, minor and major updates.",
+            tooltip: "You can enable these update types in settings",
+            command: ""
+          })
+        );
+      } else {
+        // No updates available but some types are enabled
+        codeLenses.unshift(
+          new vscode.CodeLens(summaryRange, {
+            title: "Congrats! 🙌 Your dependencies are up to date.",
+            command: ""
+          })
+        );
+        
+        if (disabledTypes.length > 0) {
+          codeLenses.unshift(
+            new vscode.CodeLens(summaryRange, {
+              title: `⚠️ You have disabled codeLens for ${disabledTypes.join(" and ")} updates.`,
+              tooltip: "You can enable these update types in settings",
+              command: ""
+            })
+          );
+        }
+      }
     }
   }
 
