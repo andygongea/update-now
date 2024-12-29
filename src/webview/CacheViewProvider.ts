@@ -12,7 +12,8 @@ interface IDependencyInfo {
 
 /** Message sent from webview to extension */
 interface IWebviewMessage {
-    command: 'refresh';
+    command: 'refresh' | 'navigateToPackage';
+    packageName?: string;
 }
 
 /** Message sent from extension to webview */
@@ -104,6 +105,9 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                 case 'refresh':
                     this._updateContent(webviewView.webview);
                     return;
+                case 'navigateToPackage':
+                    this._navigateToPackage(message.packageName || '');
+                    return;
             }
         });
 
@@ -185,6 +189,41 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
         };
 
         webview.postMessage({ type: 'update', data });
+    }
+
+    /**
+     * Navigate to the line where a package is defined in package.json
+     * @param packageName - Name of the package to navigate to
+     */
+    private async _navigateToPackage(packageName: string) {
+        const activeEditor = vscode.window.activeTextEditor;
+        if (!activeEditor || !activeEditor.document.fileName.endsWith('package.json')) {
+            return;
+        }
+
+        const text = activeEditor.document.getText();
+        try {
+            const packageJson = JSON.parse(text);
+            const lines = text.split('\n');
+            
+            // Search in both dependencies and devDependencies
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (line.includes(`"${packageName}"`)) {
+                    // Create a selection on the line
+                    const position = new vscode.Position(i, 0);
+                    activeEditor.selection = new vscode.Selection(position, position);
+                    // Reveal the line in editor
+                    activeEditor.revealRange(
+                        new vscode.Range(position, position),
+                        vscode.TextEditorRevealType.InCenter
+                    );
+                    break;
+                }
+            }
+        } catch (error) {
+            console.error('Error parsing package.json:', error);
+        }
     }
 
     private _getHtmlForWebview(webview: vscode.Webview) {
@@ -305,6 +344,12 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                                 .forEach(info => {
                                     const div = document.createElement('div');
                                     div.className = 'dependency-item';
+                                    div.onclick = () => {
+                                        vscode.postMessage({ 
+                                            command: 'navigateToPackage',
+                                            packageName: info.name 
+                                        });
+                                    };
                                     div.innerHTML = 
                                         '<p>' +
                                         '<strong>📦 ' + info.name + '</strong> ' +
@@ -425,6 +470,7 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                 .dependency-item:first-of-type { border-radius: 4px 4px 0 0; }
                 .dependency-item:last-of-type { border-radius: 0 0 4px 4px; margin-bottom: 16px; }
                 .dependency-item strong { font-weight: 600; }
+                .upn-to-update .dependency-item:hover { background-color: var(--vscode-editor-background); cursor: pointer; }
 
                 .footer { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
                 .refresh-btn { padding: 4px 12px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 4px; cursor: pointer; }
@@ -456,21 +502,7 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
             </style>
         </head>
         <body>
-            <p class="dimmed">Statistics (performed updates)</p>
-            <div class="upn-analytics">
-                <div class="upn-patches upn-stat">
-                    <h2 class="value upn-stat-patch">0</h2>
-                    <span class="label">❇️ Patch updates</span>
-                </div>
-                <div class="upn-minor upn-stat">
-                    <h2 class="value upn-stat-minor">0</h2>
-                    <span class="label">✴️ Minor updates</span>
-                </div>
-                <div class="upn-major upn-stat">
-                    <h2 class="value upn-stat-major">0</h2>
-                    <span class="label">🛑 Major updates</span>
-                </div>
-            </div>
+            
             <div class="upn-tab">
                 <div class="upn-tab-header">
                     <span class="upn-tab-item is-active">To update <i class="upn-stat-count">0</i></span>
@@ -478,9 +510,30 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                     <span class="upn-tab-item">History <i class="upn-stat-count">0</i></span>
                 </div>
                 <div class="upn-tab-contents">
-                    <div id="availabe-updates" class="upn-tab-content is-active"></div>
-                    <div id="up-to-date" class="upn-tab-content"></div>
-                    <div id="historic-updates" class="upn-tab-content"></div>
+                    <div class="upn-tab-content upn-to-update is-active">
+                        <div id="availabe-updates"></div>
+                    </div>
+                    <div class="upn-tab-content">
+                        <div id="up-to-date"></div>
+                    </div>
+                    <div class="upn-tab-content">
+                        <p class="dimmed">Statistics (performed updates)</p>
+                        <div class="upn-analytics">
+                            <div class="upn-patches upn-stat">
+                                <h2 class="value upn-stat-patch">0</h2>
+                                <span class="label">❇️ Patch updates</span>
+                            </div>
+                            <div class="upn-minor upn-stat">
+                                <h2 class="value upn-stat-minor">0</h2>
+                                <span class="label">✴️ Minor updates</span>
+                            </div>
+                            <div class="upn-major upn-stat">
+                                <h2 class="value upn-stat-major">0</h2>
+                                <span class="label">🛑 Major updates</span>
+                            </div>
+                        </div>
+                        <div id="historic-updates"></div>
+                    </div>
                 </div>
             </div>
             <div class="footer">
