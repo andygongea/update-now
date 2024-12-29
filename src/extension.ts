@@ -130,6 +130,12 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
     let minors = 0;
     let majors = 0;
 
+    // Get configuration settings
+    const config = vscode.workspace.getConfiguration('update-now.codeLens');
+    const showPatch = config.get<boolean>('patch', true);
+    const showMinor = config.get<boolean>('minor', true);
+    const showMajor = config.get<boolean>('major', true);
+
     for (const packageName in deps) {
       const { version, description, author, updateType } = deps[packageName];
       const packageJson = JSON.parse(document.getText());
@@ -145,6 +151,13 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
       if (line === -1) { continue; }
 
       if (updateType !== "latest" && currentVersion !== "latest") {
+        // Skip if the update type is disabled in settings
+        if ((updateType === "patch" && !showPatch) ||
+            (updateType === "minor" && !showMinor) ||
+            (updateType === "major" && !showMajor)) {
+          continue;
+        }
+
         const range = new vscode.Range(line, character, line, character);
         let title = "";
         let tooltip = `📦 ${packageName} \n  ├  by ${author} \n  ╰  ${description}  \n \n  •  ${packageName}@${currentVersion} (current version) \n  •  ${packageName}@${latestVersion} (latest version) \n \n`;

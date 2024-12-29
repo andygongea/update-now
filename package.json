@@ -35,6 +35,26 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "configuration": {
+      "title": "Update Now",
+      "properties": {
+        "update-now.codeLens.patch": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show code lens for patch version updates"
+        },
+        "update-now.codeLens.minor": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show code lens for minor version updates"
+        },
+        "update-now.codeLens.major": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show code lens for major version updates"
+        }
+      }
+    },
     "commands": [
       {
         "command": "update-now.updateAllDependencies",
