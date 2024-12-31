@@ -10,7 +10,7 @@ export interface IDependencyInfo {
 
 /** Message sent from webview to extension */
 export interface IWebviewMessage {
-    command: 'refresh' | 'navigateToPackage' | 'updateSettings' | 'focusPackageJson';
+    command: 'refresh' | 'navigateToPackage' | 'updateSettings' | 'focusPackageJson' | 'clearCache';
     packageName?: string;
     settings?: {
         showPatch?: boolean;

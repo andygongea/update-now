@@ -102,7 +102,7 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./",
+    "compile": "tsc -p ./ && if not exist out\\webview\\main mkdir out\\webview\\main && copy src\\webview\\main\\style.css out\\webview\\main\\style.css",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src/**/*.ts",
@@ -112,7 +112,7 @@
     "@types/glob": "^8.1.0",
     "@types/node": "22.9.0",
     "@types/semver": "^7.5.8",
-    "@types/vscode": "^1.95.0",
+    "@types/vscode": "^1.77.0",
     "@typescript-eslint/eslint-plugin": "8.14.0",
     "@typescript-eslint/parser": "8.14.0",
     "eslint": "9.14.0",

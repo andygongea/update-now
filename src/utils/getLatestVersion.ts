@@ -15,9 +15,9 @@ interface ICachedData {
 
 // Simple in-memory rate limiting
 const requestTimestamps: number[] = [];
-const RATE_LIMIT_WINDOW = 60000; // 1 minute
+const RATE_LIMIT_WINDOW = 35000; // 35 seconds
 const MAX_REQUESTS_PER_WINDOW = 20;
-const BATCH_DELAY = 4000; // 5 second delay between batches
+const BATCH_DELAY = 5000; // 5 second delay between batches
 
 function canMakeRequest(): boolean {
   const now = Date.now();
@@ -33,6 +33,8 @@ async function wait(ms: number): Promise<void> {
 }
 
 export async function getLatestVersion(packageName: string): Promise<ICachedData | null> {
+  const startTime = Date.now();
+  
   try {
     if (!canMakeRequest()) {
       // Wait for the batch delay before proceeding
@@ -44,14 +46,16 @@ export async function getLatestVersion(packageName: string): Promise<ICachedData
     const currentRequestNumber = requestTimestamps.length + 1;
     requestTimestamps.push(Date.now());
 
-    console.log(`[⇪ Update Now] Fetching latest version for ${packageName} (Request ${currentRequestNumber}/${MAX_REQUESTS_PER_WINDOW} in current batch)`);
+    console.log(`[⇪ Update Now] ${currentRequestNumber}. Fetching ${packageName}@latest`);
 
     // Fetch the latest version from NPM registry
     const url = `https://registry.npmjs.org/${packageName}/latest`;
     const response = await axios.get(url);
     const latestVersionData = response.data;
+    const endTime = Date.now();
+    const duration = (endTime - startTime) / 1000; // Convert to seconds
 
-    console.log(`[✅Success] Received version ${latestVersionData.version} for ${packageName} (Request ${currentRequestNumber}/${MAX_REQUESTS_PER_WINDOW})`);
+    console.log(`[⇪ Update Now] ✅ Received ${packageName}@${latestVersionData.version} - ${duration.toFixed(2)}s`);
 
     return {
       version: latestVersionData.version,
@@ -60,12 +64,15 @@ export async function getLatestVersion(packageName: string): Promise<ICachedData
       timestamp: Date.now()
     };
   } catch (error: any) {
+    const endTime = Date.now();
+    const duration = (endTime - startTime) / 1000;
+
     if (axios.isAxiosError(error) && error.response?.status === 429) {
-      console.error(`[Rate Limit] Package ${packageName} failed due to rate limit (429)`);
+      console.error(`[⇪ Update Now] ⛔ Rate Limit (429) - ${packageName} failed after ${duration.toFixed(2)}s`);
       return null;
     }
 
-    console.error(`Error fetching latest version for ${packageName}:`, error);
+    console.error(`[⇪ Update Now] ❌ Error fetching ${packageName}@latest after ${duration.toFixed(2)}s:`, error);
     return null;
   }
 }

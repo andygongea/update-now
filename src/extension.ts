@@ -15,12 +15,19 @@ import { isURL } from './utils/isURL';
 
 const ONE_DAY_IN_MS = 24 * 60 * 60 * 1000;
 
+let statusBarItem: vscode.StatusBarItem;
+
 class DependencyCodeLensProvider implements vscode.CodeLensProvider {
   private _onDidChangeCodeLenses: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
   public readonly onDidChangeCodeLenses: vscode.Event<void> = this._onDidChangeCodeLenses.event;
 
   private promises: Promise<any>[] = [];
   private dependenciesData: Record<string, IDependencyData> = {};
+  private totalDependencies: number = 0;
+  private currentDependency: number = 0;
+  private isProcessing: boolean = false;
+  private currentBatchPromises: Promise<any>[] = [];
+  private document: vscode.TextDocument | null = null;
 
   constructor(private context: vscode.ExtensionContext) { }
 
@@ -29,8 +36,22 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
     dependencies: Record<string, string>,
     storedDependencies: Record<string, IDependencyData>
   ): Promise<void> {
+    if (this.isProcessing) {
+      return;
+    }
+
+    this.isProcessing = true;
+    this.document = document;
     const currentTime = Date.now();
     const updatePromises: Promise<any>[] = [];
+    this.currentBatchPromises = [];
+
+    this.totalDependencies = Object.keys(dependencies).length;
+    const estimatedMinutes = Math.ceil(this.totalDependencies / 20);
+    
+    statusBarItem.text = `⇪ Update Now: Reading dependencies data... (${this.totalDependencies} deps, ~${estimatedMinutes} min)`;
+    
+    this.currentDependency = 0;
 
     for (const [packageName, currentVersion] of Object.entries(dependencies)) {
       const storedDependency = storedDependencies[packageName];
@@ -39,7 +60,29 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
                          storedDependency.version === null;
 
       if (needsUpdate) {
-        updatePromises.push(this.updateDependencyData(document, packageName, currentVersion));
+        this.currentDependency++;
+        const remainingDeps = this.totalDependencies - this.currentDependency;
+        const remainingMinutes = Math.ceil(remainingDeps / 20);
+        const timeText = remainingMinutes > 0 ? `~${remainingMinutes} min remaining` : 'less than 1 min remaining';
+        statusBarItem.text = `⇪ Update Now: $(loading~spin) Fetching dependencies [${this.currentDependency - 20}...${this.currentDependency}] of ${this.totalDependencies}`;
+        
+        const promise = this.updateDependencyData(document, packageName, currentVersion);
+        updatePromises.push(promise);
+        this.currentBatchPromises.push(promise);
+        
+        // When we reach 20 dependencies or it's the last one, process the current batch
+        if (this.currentBatchPromises.length === 20 || this.currentDependency === this.totalDependencies) {
+          await Promise.all(this.currentBatchPromises);
+          await this.context.workspaceState.update('dependenciesData', this.dependenciesData);
+          
+          // Refresh CodeLens and Cache View after each batch
+          this._onDidChangeCodeLenses.fire();
+          if (cacheViewProvider) {
+            cacheViewProvider.refresh();
+          }
+          
+          this.currentBatchPromises = [];
+        }
       } else {
         this.updateStoredDependency(packageName, currentVersion, storedDependency);
       }
@@ -48,6 +91,16 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
     if (updatePromises.length > 0) {
       await Promise.all(updatePromises);
       await this.context.workspaceState.update('dependenciesData', this.dependenciesData);
+    }
+
+    statusBarItem.text = "⇪ Update Now: $(loading~spin) Generating CodeLens...";
+    this._onDidChangeCodeLenses.fire();
+    statusBarItem.text = "⇪ Update Now: ✅ Ready";
+    this.isProcessing = false;
+    
+    // Final refresh of Cache View
+    if (cacheViewProvider) {
+      cacheViewProvider.refresh();
     }
   }
 
@@ -416,6 +469,12 @@ async function updateAllDependencies(context: vscode.ExtensionContext, documentU
 let cacheViewProvider: CacheViewProvider;
 
 export function activate(context: vscode.ExtensionContext): void {
+  // Create status bar item
+  statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
+  statusBarItem.text = "⇪ Update Now: ✅ Ready";
+  statusBarItem.show();
+  context.subscriptions.push(statusBarItem);
+
   context.globalState.update("dependencyUpgradeCount", 0);
 
   const provider = new DependencyCodeLensProvider(context);

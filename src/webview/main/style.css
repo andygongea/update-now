@@ -76,7 +76,6 @@ p { margin: 0; line-height: 1.45; word-break: break-word; }
 .setting-checkbox { display: none; }
 .setting-title { font-size: 1.3rem; }
 
-
-
+.upn-button { display: inline-flex; justify-content: center; width: auto; padding: 4px 14px; margin:4px 0; white-space: nowrap; border: 1px solid var(--vscode-button-border, transparent); border-radius: 2px; box-sizing: border-box; color: var(--vscode-button-foreground); background-color: var(--vscode-button-background, transparent); cursor: pointer; line-height: 18px;  }
 
 .is-hidden { display: none; }
