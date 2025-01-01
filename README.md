@@ -76,6 +76,3 @@ With just one click in your `package.json`, you can view and apply updates while
 ## License
 
 Released under the [ICS License](LICENSE).
-
----
-*Last updated: December 30, 2024*
