@@ -112,6 +112,9 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                 case 'focusPackageJson':
                     this._focusOnPackageJson();
                     return;
+                case 'clearCache':
+                    this._clearCache();
+                    return;
             }
         });
 
@@ -249,8 +252,31 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
         }
     }
 
+    private async _clearCache() {
+        await this._context.workspaceState.update('dependenciesData', {});
+        await this._context.workspaceState.update('trackUpdate', []);
+        
+        // Find and refresh all package.json files
+        const packageJsonFiles = await vscode.workspace.findFiles('**/package.json', '**/node_modules/**');
+        if (packageJsonFiles.length > 0) {
+            const document = await vscode.workspace.openTextDocument(packageJsonFiles[0]);
+            // This will trigger a refresh of the CodeLens
+            this._context.workspaceState.update('dependenciesData', {});
+            document.save();
+
+            // Focus on the package.json file
+            const editor = await vscode.window.showTextDocument(document, {
+                preview: false,
+                preserveFocus: false
+            });
+        }
+        
+        this.refresh();
+        vscode.window.showInformationMessage('Dependencies cache cleared successfully');
+    }
+
     private _getMediaUrl(fileName: string): vscode.Uri {
-        return this._webview!.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'src', 'webview', fileName));
+        return this._webview!.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'out', 'webview', fileName));
     }
 
     private _getHtmlForWebview(webview: vscode.Webview) {
@@ -551,6 +577,16 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                 }
 
                 setupSettingsListeners();
+
+                // Add clear cache button listener
+                const clearCacheBtn = document.querySelector('.upn-clear-cache');
+                if (clearCacheBtn) {
+                    clearCacheBtn.addEventListener('click', () => {
+                        vscode.postMessage({
+                            command: 'clearCache'
+                        });
+                    });
+                }
             })();`;
 
         return getCacheViewTemplate(webview, this._getMediaUrl.bind(this), settingsSection, scriptContent, warningMessage, emptyStateMessage);
