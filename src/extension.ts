@@ -461,9 +461,8 @@ async function updateAllDependencies(context: vscode.ExtensionContext, documentU
     vscode.window.showInformationMessage("All dependencies are up to date.");
   } else {
     logger.info('Successfully updated all dependencies');
-    vscode.window.showInformationMessage(`🎩 Congrats! You just updated ${dependenciesToUpdate.length} dependencies to their latest versions. Please ensure you code still runs as intended.`);
+    vscode.window.showInformationMessage(`🎉 Congrats! You just updated ${dependenciesToUpdate.length} dependencies to their latest versions. Please ensure you code still runs as intended.`);
   }
-  logger.show();
 }
 
 let cacheViewProvider: CacheViewProvider;
