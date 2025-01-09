@@ -15,7 +15,7 @@ interface ICachedData {
 
 // Simple in-memory rate limiting
 const requestTimestamps: number[] = [];
-const RATE_LIMIT_WINDOW = 35000; // 35 seconds
+const RATE_LIMIT_WINDOW = 25000; // 25 seconds
 const MAX_REQUESTS_PER_WINDOW = 20;
 const BATCH_DELAY = 5000; // 5 second delay between batches
 

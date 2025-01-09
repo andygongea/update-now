@@ -397,7 +397,7 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                     }
                     
                     const totalCount = Object.keys(data.dependencies).length;
-                    const titleElement = document.querySelector('.upn-title');
+                    const titleElement = document.querySelector('#upn-cached-count');
                     if (titleElement) {
                         titleElement.textContent = 'Dependencies Data (' + totalCount + ')';
                     }

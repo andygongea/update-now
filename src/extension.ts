@@ -64,7 +64,7 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
         const remainingDeps = this.totalDependencies - this.currentDependency;
         const remainingMinutes = Math.ceil(remainingDeps / 20);
         const timeText = remainingMinutes > 0 ? `~${remainingMinutes} min remaining` : 'less than 1 min remaining';
-        statusBarItem.text = `⇪ Update Now: $(loading~spin) Fetching dependencies [${this.currentDependency - 20}...${this.currentDependency}] of ${this.totalDependencies}`;
+        statusBarItem.text = `⇪ Update Now: $(loading~spin) Fetching dependencies [${Math.max(1, this.currentDependency - 19)}...${this.currentDependency}] of ${this.totalDependencies}`;
         
         const promise = this.updateDependencyData(document, packageName, currentVersion);
         updatePromises.push(promise);
