@@ -68,19 +68,33 @@ export function getCacheViewTemplate(
                 </div>
                 <div class="upn-footer">
                     <h3 class="upn-footer-title">⚙️ Update Now Settings</h3>
+
                     <div class="upn-footer-section">
                         <div class="settings-section">
                             ${settingsSection}
                         </div>
                     </div>
+
+
+
                     <div class="upn-footer-section">
                         <div class="settings-section">
-                            <h3 class="settings-title upn-title">Cached Dependencies (0)</h3>
+                            <h3 id="upn-cached-count" class="settings-title upn-title">Cached Dependencies (0)</h3>
                             <div class="timestamp upn-cache-age"></div>
                             <div class="upn-warning">
                                 <p class="upn-message">⚠️ Clearing the cache will delete the dependencies data stored in the extension. The fetching mechanism will request batches of 20 dependencies every 40 seconds to avoid NPM rate limits.</p>
-                                <button class="upn-button upn-clear-cache">Clear Cache</button>
+                                <button class="upn-button upn-button-ghost upn-clear-cache">Clear Cache</button>
                             </div>
+                        </div>
+                    </div>
+
+                    <div class="upn-footer-section">
+                        <div class="settings-section">
+                            <h3 class="settings-title upn-title">Thanks for using Update Now! </h3>
+                            <p>I hope you find it useful! Please support the project by giving it stars on the VSCode marketplace: ⭐⭐⭐⭐⭐</p>
+
+                            <a href="https://marketplace.visualstudio.com/items?itemName=AndyGongea.update-now&ssr=false#review-details" class="upn-button"">Rate this extension</a>
+                            
                         </div>
                     </div>
                 </div>

@@ -4,7 +4,18 @@ All notable changes to the "update-now" extension will be documented in this fil
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
-## [1.0.0-alpha.0] - 2024-12-30
+## [1.0.1] - 2025-01-10
+
+### Fixed
+ 
+ - Status indicator showed negative numbers for the first batch of dependencies
+
+### Changed
+ 
+ - Reduced the time alocated to fetch the latest version from 35 to 25 seconds
+ - Updated the URL for the marketplace rating button
+
+## [1.0.0] - 2024-12-30
 
 ### Added
  

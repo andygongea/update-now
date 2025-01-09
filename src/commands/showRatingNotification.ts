@@ -13,7 +13,7 @@ export async function showRatingNotification() {
 
   if (result === rateButton) {
     const extensionId = "AndyGongea.update-now"; // Replace with your extension's ID
-    const marketplaceUrl = `https://marketplace.visualstudio.com/items?itemName=${extensionId}`;
+    const marketplaceUrl = `https://marketplace.visualstudio.com/items?itemName=${extensionId}&ssr=false#review-details`;
     vscode.env.openExternal(vscode.Uri.parse(marketplaceUrl));
   }
 }
