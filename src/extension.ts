@@ -253,13 +253,13 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
       if (disabledTypes.length > 0) {
         codeLenses.unshift(
           new vscode.CodeLens(summaryRange, {
-            title: `⚠️ You have disabled codeLens for ${disabledTypes.join(" and ")} updates.`,
+            title: `⇪ Update Now: ⚠️ You have disabled codeLens for ${disabledTypes.join(" and ")} updates.`,
             tooltip: "You can enable these update types in settings",
             command: ""
           })
         );
       }
-      const summaryTitle = `Update Now: ${patches + minors + majors
+      const summaryTitle = `⇪ Update Now: ${patches + minors + majors
         } updates available (❇️ ${patches} x patch, ✴️ ${minors} x minor, 🛑 ${majors} x major)`;
 
       codeLenses.unshift(
@@ -276,13 +276,13 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
         // All update types are disabled
         codeLenses.unshift(
           new vscode.CodeLens(summaryRange, {
-            title: "Congrats! 🙌 Your dependencies are up to date.",
-            command: ""
+            title: "⇪ Update Now: ⚠️ You have disabled all CodeLens.",
+            tooltip: "Enable CodeLens for PATCH, MINOR and MAJOR updates in settings.",
+            command: "update-now.enableAllCodeLens"
           }),
           new vscode.CodeLens(summaryRange, {
-            title: "⚠️ You have disabled codeLens for patches, minor and major updates.",
-            tooltip: "You can enable these update types in settings",
-            command: ""
+            title: "Enable codeLens for PATCH, MINOR and MAJOR updates.",
+            command: "update-now.enableAllCodeLens"
           })
         );
       } else {
@@ -485,6 +485,16 @@ export function activate(context: vscode.ExtensionContext): void {
       provider.refreshCodeLenses(document);
     }
   });
+
+  // Command to enable all CodeLens types
+  let enableAllCodeLensCommand = vscode.commands.registerCommand('update-now.enableAllCodeLens', async () => {
+    const config = vscode.workspace.getConfiguration('update-now');
+    await config.update('codeLens.patch', true, true);
+    await config.update('codeLens.minor', true, true);
+    await config.update('codeLens.major', true, true);
+    vscode.window.showInformationMessage('All CodeLens types have been enabled.');
+  });
+  context.subscriptions.push(enableAllCodeLensCommand);
 
   context.subscriptions.push(
     vscode.languages.registerCodeLensProvider({ language: 'json', pattern: '**/package.json' }, provider),

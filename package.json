@@ -13,7 +13,7 @@
   "publisher": "AndyGongea",
   "version": "1.0.1",
   "engines": {
-    "vscode": "^1.77.0"
+    "vscode": "^1.84.0"
   },
   "icon": "resources/logo@2x.png",
   "author": {
@@ -112,9 +112,10 @@
     "@types/glob": "^8.1.0",
     "@types/node": "22.9.0",
     "@types/semver": "^7.5.8",
-    "@types/vscode": "^1.77.0",
+    "@types/vscode": "^1.84.0",
     "@typescript-eslint/eslint-plugin": "8.14.0",
     "@typescript-eslint/parser": "8.14.0",
+    "@vscode/test-electron": "^2.4.1",
     "eslint": "9.14.0",
     "glob": "11.0.0",
     "typescript": "^5.7.2"

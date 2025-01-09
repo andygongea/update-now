@@ -13,14 +13,14 @@ p { margin: 0; line-height: 1.45; word-break: break-word; }
 .upn-empty-state { display: flex; flex-direction: column; align-items: center; padding: 20px; border: 2px dashed var(--vscode-panel-border); border-radius: 4px; margin:2rem;  }
 .upn-empty-state .upn-icon { font-size: 3.2rem; margin:1rem 0;  }
 
-.update-type { display: inline-block; padding: 4px 8px 5px; border-radius: 12px; font-size: 1.2rem; font-weight: 600; line-height: 1; text-transform: uppercase; letter-spacing: 1px; color: var(--vscode-foreground);; border: 1px solid var(--vscode-panel-border); }
+.update-type { display: inline-block; padding: 4px 8px; border-radius: 12px; font-size: 1.2rem; font-weight: 600; line-height: 1; text-transform: uppercase; letter-spacing: 1px; color: var(--vscode-foreground); }
 .update-type.patch { color: var(--vscode-minimapGutter-addedBackground); }
-.update-type.patch::before { content:"❇️ Patch" }
+.update-type.patch::before { content:"❇️ Patch"; font-weight: 600; }
 .update-type.minor { color: var(--vscode-editorWarning-foreground); }
-.update-type.minor::before { content:"✴️ Minor" }
+.update-type.minor::before { content:"✴️ Minor"; font-weight: 600; }
 .update-type.major { color: var(--vscode-minimapGutter-deletedBackground); }
-.update-type.major::before { content:"🛑 Major" }
-.update-type.latest::before { color: var(--vscode-foreground); content:"✅ Up to date packages" }
+.update-type.major::before { content:"🛑 Major"; font-weight: 600; }
+.update-type.latest::before { color: var(--vscode-foreground); content:"✅ Up to date packages"; font-weight: 600; }
 
 .dependency-item { margin-bottom: -1px; padding: 10px; border: 1px solid var(--vscode-panel-border); border-radius: 0; }
 .dependency-item:first-of-type { border-radius: 4px 4px 0 0; }
@@ -28,7 +28,7 @@ p { margin: 0; line-height: 1.45; word-break: break-word; }
 .dependency-item strong { font-weight: 600; }
 .upn-to-update .dependency-item:hover { background-color: var(--vscode-editor-background); cursor: pointer; }
 
-.group-title,.settings-title { position: relative; font-size: 1.4rem; font-weight: 600; margin: 0 0 4px 0; padding: 8px 0; background: var(--vscode-editor-lineHighlightBackground); border-radius: 4px; }
+.group-title,.settings-title { position: relative; font-size: 1.4rem; font-weight: 600; margin: 0 0 4px 0; padding: 8px 0; border-radius: 4px; }
 .settings-title::after { position: absolute; content: ""; top: 19px; right: 0; left: 0; height: 1px; background-image: linear-gradient(90deg, transparent 120px, var(--vscode-panel-border));}
 
 .upn-analytics { display: flex; justify-content: space-between; margin: 10px 0 20px; border:1px solid var(--vscode-panel-border);  border-radius: 4px; background-color: var(--vscode-editor-background);  }
