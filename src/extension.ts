@@ -29,6 +29,15 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
   private currentBatchPromises: Promise<any>[] = [];
   private document: vscode.TextDocument | null = null;
 
+  private updateStatusBar(message: string, isProcessing: boolean = false) {
+    if (isProcessing) {
+      statusBarItem.text = `⇪ Update Now: $(sync~spin) ${message}`;
+    } else {
+      statusBarItem.text = `⇪ Update Now: ${message}`;
+    }
+    statusBarItem.tooltip = "Updates across your scanned package.json files";
+  }
+
   constructor(private context: vscode.ExtensionContext) { }
 
   private async validateAndUpdateDependencies(
@@ -47,12 +56,11 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
     this.currentBatchPromises = [];
 
     this.totalDependencies = Object.keys(dependencies).length;
+    this.currentDependency = 0;
     const estimatedMinutes = Math.ceil(this.totalDependencies / 20);
     
-    statusBarItem.text = `⇪ Update Now: Reading dependencies data... (${this.totalDependencies} deps, ~${estimatedMinutes} min)`;
+    this.updateStatusBar(`Checking ${this.totalDependencies} dependencies (~${estimatedMinutes} min)`, true);
     
-    this.currentDependency = 0;
-
     for (const [packageName, currentVersion] of Object.entries(dependencies)) {
       const storedDependency = storedDependencies[packageName];
       const needsUpdate = !storedDependency || 
@@ -64,7 +72,7 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
         const remainingDeps = this.totalDependencies - this.currentDependency;
         const remainingMinutes = Math.ceil(remainingDeps / 20);
         const timeText = remainingMinutes > 0 ? `~${remainingMinutes} min remaining` : 'less than 1 min remaining';
-        statusBarItem.text = `⇪ Update Now: $(loading~spin) Fetching dependencies [${Math.max(1, this.currentDependency - 19)}...${this.currentDependency}] of ${this.totalDependencies}`;
+        this.updateStatusBar(`Checking dependencies [${Math.max(1, this.currentDependency - 19)}...${this.currentDependency}] of ${this.totalDependencies} (${timeText})`, true);
         
         const promise = this.updateDependencyData(document, packageName, currentVersion);
         updatePromises.push(promise);
@@ -76,7 +84,7 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
           await this.context.workspaceState.update('dependenciesData', this.dependenciesData);
           
           // Refresh CodeLens and Cache View after each batch
-          this._onDidChangeCodeLenses.fire();
+          this.refreshCodeLenses(this.document);
           if (cacheViewProvider) {
             cacheViewProvider.refresh();
           }
@@ -93,9 +101,14 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
       await this.context.workspaceState.update('dependenciesData', this.dependenciesData);
     }
 
-    statusBarItem.text = "⇪ Update Now: $(loading~spin) Generating CodeLens...";
-    this._onDidChangeCodeLenses.fire();
-    statusBarItem.text = "⇪ Update Now: ✅ Ready";
+    // Update status bar with results
+    const outdatedCount = Object.values(this.dependenciesData).filter(dep => dep.updateType !== "latest").length;
+    if (outdatedCount > 0) {
+      this.updateStatusBar(`📦 ${outdatedCount} updates available`);
+    } else {
+      this.updateStatusBar(`✅ All up to date`);
+    }
+    
     this.isProcessing = false;
     
     // Final refresh of Cache View
@@ -253,7 +266,7 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
       if (disabledTypes.length > 0) {
         codeLenses.unshift(
           new vscode.CodeLens(summaryRange, {
-            title: `⇪ Update Now: ⚠️ You have disabled codeLens for ${disabledTypes.join(" and ")} updates.`,
+            title: `⚠️ You have disabled CodeLens for ${disabledTypes.join(" and ")} updates.`,
             tooltip: "You can enable these update types in settings",
             command: ""
           })
@@ -276,12 +289,12 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
         // All update types are disabled
         codeLenses.unshift(
           new vscode.CodeLens(summaryRange, {
-            title: "⇪ Update Now: ⚠️ You have disabled all CodeLens.",
-            tooltip: "Enable CodeLens for PATCH, MINOR and MAJOR updates in settings.",
+            title: "⇪ Update Now: All CodeLens are disabled.",
+            tooltip: "CodeLens for PATCH, MINOR and MAJOR are disabled.",
             command: "update-now.enableAllCodeLens"
           }),
           new vscode.CodeLens(summaryRange, {
-            title: "Enable codeLens for PATCH, MINOR and MAJOR updates.",
+            title: "👉 Enable codeLens for PATCH, MINOR and MAJOR updates.",
             command: "update-now.enableAllCodeLens"
           })
         );
@@ -471,6 +484,7 @@ export function activate(context: vscode.ExtensionContext): void {
   // Create status bar item
   statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
   statusBarItem.text = "⇪ Update Now: ✅ Ready";
+  statusBarItem.tooltip = "Updates across your scanned package.json files";
   statusBarItem.show();
   context.subscriptions.push(statusBarItem);
 
@@ -487,12 +501,29 @@ export function activate(context: vscode.ExtensionContext): void {
   });
 
   // Command to enable all CodeLens types
-  let enableAllCodeLensCommand = vscode.commands.registerCommand('update-now.enableAllCodeLens', async () => {
+  let enableAllCodeLensCommand = vscode.commands.registerCommand('update-now.enableAllCodeLens', () => {
     const config = vscode.workspace.getConfiguration('update-now');
-    await config.update('codeLens.patch', true, true);
-    await config.update('codeLens.minor', true, true);
-    await config.update('codeLens.major', true, true);
-    vscode.window.showInformationMessage('All CodeLens types have been enabled.');
+    
+    // Update all settings in parallel
+    Promise.all([
+      config.update('codeLens.patch', true, true),
+      config.update('codeLens.minor', true, true),
+      config.update('codeLens.major', true, true)
+    ]).then(async () => {
+      // Get active editor
+      const editor = vscode.window.activeTextEditor;
+      if (editor && isPackageJson(editor.document)) {
+        // Refresh CodeLenses for the current document
+        await provider.refreshCodeLenses(editor.document);
+      }
+      
+      // Refresh cache view if it exists
+      if (cacheViewProvider) {
+        await cacheViewProvider.refresh();
+      }
+      
+      vscode.window.showInformationMessage('All CodeLens types have been enabled.');
+    });
   });
   context.subscriptions.push(enableAllCodeLensCommand);
 
@@ -517,7 +548,7 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
     vscode.commands.registerCommand("update-now.showCacheView", async () => {
       try {
-        await vscode.commands.executeCommand('workbench.view.dependenciesData');
+        await vscode.commands.executeCommand('workbench.view.update-now-cache');
       } catch (error) {
         console.error('[⇪ Update Now] Failed to show cache view:', error);
       }

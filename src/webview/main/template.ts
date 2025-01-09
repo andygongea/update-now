@@ -77,16 +77,6 @@ export function getCacheViewTemplate(
 
                     <div class="upn-footer-section">
                         <div class="settings-section">
-                            <h3 class="settings-title upn-title">Rate this extension! </h3>
-                            <p>I hope you find it useful! Please support the project by giving it stars on the VSCode marketplace: ⭐⭐⭐⭐⭐</p>
-
-                            <a href="https://marketplace.visualstudio.com/items?itemName=AndyGongea.update-now&ssr=false#review-details" class="upn-button upn-rate-me">Rate this extension</a>
-                            
-                        </div>
-                    </div>
-
-                    <div class="upn-footer-section">
-                        <div class="settings-section">
                             <h3 id="upn-cached-count" class="settings-title upn-title">Cached Dependencies (0)</h3>
                             <div class="timestamp upn-cache-age"></div>
                             <div class="upn-warning">
@@ -96,6 +86,15 @@ export function getCacheViewTemplate(
                         </div>
                     </div>
 
+                    <div class="upn-footer-section">
+                        <div class="settings-section">
+                            <h3 class="settings-title upn-title">Rate this extension! </h3>
+                            <p>I hope you find it useful! Please support the project by giving it stars on the VSCode marketplace: ⭐⭐⭐⭐⭐</p>
+
+                            <a href="https://marketplace.visualstudio.com/items?itemName=AndyGongea.update-now&ssr=false#review-details" class="upn-button upn-rate-me">Rate this extension</a>
+                            
+                        </div>
+                    </div>
                     
                 </div>
             </div>
