@@ -75,7 +75,15 @@ export function getCacheViewTemplate(
                         </div>
                     </div>
 
+                    <div class="upn-footer-section">
+                        <div class="settings-section">
+                            <h3 class="settings-title upn-title">Rate this extension! </h3>
+                            <p>I hope you find it useful! Please support the project by giving it stars on the VSCode marketplace: ⭐⭐⭐⭐⭐</p>
 
+                            <a href="https://marketplace.visualstudio.com/items?itemName=AndyGongea.update-now&ssr=false#review-details" class="upn-button upn-rate-me">Rate this extension</a>
+                            
+                        </div>
+                    </div>
 
                     <div class="upn-footer-section">
                         <div class="settings-section">
@@ -88,15 +96,7 @@ export function getCacheViewTemplate(
                         </div>
                     </div>
 
-                    <div class="upn-footer-section">
-                        <div class="settings-section">
-                            <h3 class="settings-title upn-title">Thanks for using Update Now! </h3>
-                            <p>I hope you find it useful! Please support the project by giving it stars on the VSCode marketplace: ⭐⭐⭐⭐⭐</p>
-
-                            <a href="https://marketplace.visualstudio.com/items?itemName=AndyGongea.update-now&ssr=false#review-details" class="upn-button"">Rate this extension</a>
-                            
-                        </div>
-                    </div>
+                    
                 </div>
             </div>
             <script>${scriptContent}</script>
