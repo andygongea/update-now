@@ -453,9 +453,19 @@ async function updateAllDependencies(context: vscode.ExtensionContext, documentU
       if (latestVersionData?.version && semver.valid(latestVersionData.version)) {
         const strippedCurrentVersion = currentVersion.replace(/^[~^]/, "");
         if (latestVersionData.version !== strippedCurrentVersion) {
-          logger.info(`Update found for ${packageName}: ${currentVersion} -> ${latestVersionData.version}`);
-          dependenciesToUpdate.push(packageName);
-          await updateDependency(context, documentUri, packageName, latestVersionData.version, false);
+          const updateType = getUpdateType(currentVersion, latestVersionData.version);
+          const config = vscode.workspace.getConfiguration('update-now.codeLens');
+          const shouldUpdate = (updateType === "patch" && config.get<boolean>('patch', true)) ||
+                             (updateType === "minor" && config.get<boolean>('minor', true)) ||
+                             (updateType === "major" && config.get<boolean>('major', true));
+
+          if (shouldUpdate) {
+            logger.info(`Update found for ${packageName}: ${currentVersion} -> ${latestVersionData.version}`);
+            dependenciesToUpdate.push(packageName);
+            await updateDependency(context, documentUri, packageName, latestVersionData.version, false);
+          } else {
+            logger.info(`Skipping ${packageName} - update type ${updateType} is disabled in settings`);
+          }
         } else {
           logger.info(`No update needed for ${packageName}`);
         }
