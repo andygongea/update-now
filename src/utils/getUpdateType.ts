@@ -1,4 +1,5 @@
 import * as semver from "semver";
+import { isURL } from './isURL';
 
 export function getUpdateType(currentValue: string | undefined, newValue: string): "major" | "minor" | "patch" | "latest" | "invalid" | "invalid latest" | "url" {
   if (!currentValue) {
@@ -17,13 +18,6 @@ export function getUpdateType(currentValue: string | undefined, newValue: string
   if (!isValidNew) {
     return isLatest ? "invalid latest" : "invalid";
   }
-
-  // Check if the current version or new version is a URL or GitHub shortcut
-  const isURL = (version: string) =>
-    /^https?:\/\//.test(version) ||                    // HTTP(S) URLs
-    /^git(\+ssh|\+https|\+file)?:\/\//.test(version) || // Git URLs
-    /^git@[^:]+:.+\.git$/.test(version) ||            // SSH Git URLs
-    /^[^\/]+\/[^\/]+#.+$/.test(version);              // GitHub shortcuts with ref
 
   if (isURL(currentValue) || isURL(newValue)) {
     return "url";
