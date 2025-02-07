@@ -438,7 +438,7 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                             const groupDiv = document.createElement('div');
                             groupDiv.className = 'update-group';
                             groupDiv.innerHTML = '<h3 class="group-title"><span class="update-type ' + 
-                                updateType + '"> Updates</span></h3>';
+                                updateType + '"> Updates</span><i class="upn-stat-count">' + groups[updateType].length + '</i></h3>';
                              
                             groups[updateType]
                                 .sort((a, b) => a.name.localeCompare(b.name))

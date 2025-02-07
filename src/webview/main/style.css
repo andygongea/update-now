@@ -43,7 +43,7 @@ p { margin: 0; line-height: 1.45; word-break: break-word; }
 .upn-tab-header { display: flex; border-bottom: 1px solid var(--vscode-panel-border); }
 .upn-tab-item { flex: 1; padding: 8px; cursor: pointer; text-align: center; }
 .upn-tab-item.is-active { border-bottom: 3px solid var(--vscode-focusBorder); }
-.upn-stat-count { display: inline-block; min-width: 16px; font-style: normal; padding: 1px 4px 2px; line-height: 1; background: var(--vscode-editor-background); border: 1px solid var(--vscode-panel-border); border-radius: 16px; }
+.upn-stat-count { display: inline-block; min-width: 16px; font-style: normal; padding: 1px 4px 2px; line-height: 1; text-align: center; background: var(--vscode-editor-background); border: 1px solid var(--vscode-panel-border); border-radius: 16px; }
 .upn-tab-contents { display: flex; }
 .upn-tab-content { flex: 1; padding: 16px 0; display: none; }
 .upn-tab-content.is-active { display: block; }
