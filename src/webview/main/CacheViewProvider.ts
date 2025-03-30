@@ -222,10 +222,22 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
             const packageJson = JSON.parse(text);
             const lines = text.split('\n');
             
-            // Search in both dependencies and devDependencies
+            // Find the line numbers for dependencies and devDependencies sections
+            let inTargetSection = false;
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i].trim();
-                if (line.includes(`"${packageName}"`)) {
+                
+                // Check if we're entering or leaving a relevant section
+                if (line.includes('"dependencies"') || line.includes('"devDependencies"')) {
+                    inTargetSection = true;
+                    continue;
+                } else if (inTargetSection && line.startsWith('}')) {
+                    inTargetSection = false;
+                    continue;
+                }
+
+                // Only search for the package if we're in a relevant section
+                if (inTargetSection && line.includes(`"${packageName}"`)) {
                     // Create a selection on the line
                     const position = new vscode.Position(i, 0);
                     activeEditor.selection = new vscode.Selection(position, position);

@@ -15,10 +15,17 @@ export enum UpdateType {
   url = "url",
 }
 
+export interface IPackagePosition {
+  line: number;
+  character: number;
+  inDependencies: boolean;
+}
+
 export interface IDependencyData {
   version: string | null;
   description?: string;
   author?: string;
   timestamp: number;
   updateType?: UpdateType;
+  positions?: IPackagePosition[];
 }
