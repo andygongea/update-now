@@ -37,7 +37,7 @@ export function getCacheViewTemplate(
                     <div class="upn-tab-header">
                         <span class="upn-tab-item is-active">To update <i class="upn-stat-count">0</i></span>
                         <span class="upn-tab-item">Latest <i class="upn-stat-count">0</i></span>
-                        <span class="upn-tab-item">History <i class="upn-stat-count">0</i></span>
+                        <span class="upn-tab-item">Stats <i class="upn-stat-count">0</i></span>
                     </div>
                     <div class="upn-tab-contents">
                         <div class="upn-tab-content upn-to-update is-active">
@@ -80,7 +80,7 @@ export function getCacheViewTemplate(
                             <h3 id="upn-cached-count" class="settings-title upn-title">Cached Dependencies (0)</h3>
                             <div class="timestamp upn-cache-age"></div>
                             <div class="upn-warning">
-                                <p class="upn-message">⚠️ Clearing the cache will delete the dependencies data stored in the extension. The fetching mechanism will request batches of 20 dependencies every 40 seconds to avoid NPM rate limits.</p>
+                                <p class="upn-message">⚠️ Clearing the cache will delete the dependencies data stored in the extension. The fetching mechanism will request batches of 20 dependencies every 25 seconds to avoid NPM rate limits.</p>
                                 <button class="upn-button upn-button-ghost upn-clear-cache">Clear Cache</button>
                             </div>
                         </div>

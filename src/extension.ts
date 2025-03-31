@@ -517,9 +517,15 @@ export function activate(context: vscode.ExtensionContext): void {
 
   vscode.workspace.findFiles('**/package.json', '**/node_modules/**').then(async (packageJsonFiles) => {
     if (packageJsonFiles.length > 0) {
-      const document = await vscode.workspace.openTextDocument(packageJsonFiles[0]);
-      provider.refreshCodeLenses(document);
+      try {
+        const document = await vscode.workspace.openTextDocument(packageJsonFiles[0]);
+        provider.refreshCodeLenses(document);
+      } catch (error: unknown) {
+        console.error('Error opening package.json file:', error);
+      }
     }
+  }, (error: unknown) => {
+    console.error('Error finding package.json files:', error);
   });
 
   // Command to enable all CodeLens types
