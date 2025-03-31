@@ -27,5 +27,4 @@ export interface IDependencyData {
   author?: string;
   timestamp: number;
   updateType?: UpdateType;
-  positions?: IPackagePosition[];
 }

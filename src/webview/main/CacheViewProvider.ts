@@ -399,6 +399,11 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                     }
                 });
 
+                // In your code where you display descriptions:
+                function stripHtml(html) {
+                    return html.replace(/<[^>]*>/g, '');
+                }
+
                 function updateContent(data) {
                     const availableUpdates = document.getElementById('available-updates');
                     const upToDate = document.getElementById('up-to-date');
@@ -469,7 +474,7 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                                         '<span class="dimmed">⇢</span> ' +
                                         '<strong>' + info.version + '</strong>' +
                                         '</p>' +
-                                        '<p class="dimmed">' + (info.description || '') + '</p>';
+                                        '<p class="dimmed">' + stripHtml(info.description || '') + '</p>';
                                     groupDiv.appendChild(div);
                                 });
                              

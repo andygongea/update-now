@@ -166,7 +166,6 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
     const latestVersionData = await getLatestVersion(packageName);
     if (!latestVersionData) { return; };
 
-    const positions = getPosition(document, packageName);
     const latestVersion = latestVersionData.version;
     const updateType = getUpdateType(currentVersion, latestVersion);
 
@@ -176,7 +175,6 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
       author: latestVersionData.author?.name || "various contributors",
       timestamp: Date.now(),
       updateType: updateType as UpdateType,
-      positions: positions // Store all positions for this package
     };
 
     return {
@@ -184,7 +182,6 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
       currentVersion,
       latestVersion,
       update: updateType,
-      positions,
       description: latestVersionData.description,
       author: latestVersionData.author?.name || "various contributors",
     };
@@ -203,14 +200,12 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
     const showMajor = config.get<boolean>('major', true);
 
     for (const packageName in deps) {
-      const { version, description, author, updateType, positions } = deps[packageName];
+      const { version, description, author, updateType } = deps[packageName];
       const packageJson = JSON.parse(document.getText());
-      const currentVersion = packageJson.dependencies[packageName] || packageJson.devDependencies[packageName];
-      const latestVersion = version;
-      if (!currentVersion) {
-        continue;
-      }
-
+      
+      // Get positions dynamically when needed instead of storing them
+      const positions = getPosition(document, packageName);
+      
       // Check if we have valid positions in dependencies or devDependencies sections
       const validPositions = positions?.filter((pos: IPackagePosition) => pos.inDependencies && pos.line !== -1) || [];
       
@@ -218,8 +213,36 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
         continue; // Skip if no valid positions found
       }
 
-      // Count this package only once regardless of how many positions it has
-      if (updateType !== "latest" && currentVersion !== "latest") {
+      // Track whether we've already counted this package for statistics
+      let packageCounted = false;
+
+      // Create a CodeLens for each position where the package appears
+      for (const position of validPositions) {
+        const range = new vscode.Range(position.line, position.character, position.line, position.character);
+        
+        // Determine if this position is in dependencies or devDependencies
+        const isDev = this.isInDevDependencies(document, position.line);
+        const sectionType = isDev ? 'devDependencies' : 'dependencies';
+        const currentVersion = packageJson[sectionType]?.[packageName];
+        
+        if (!currentVersion) {
+          continue;
+        }
+
+        const latestVersion = version;
+        
+        // Skip if the package in this section is already at the latest version
+        const cleanCurrentVersion = currentVersion.replace(/^[~^]/, "");
+        const cleanLatestVersion = latestVersion ? latestVersion.replace(/^[~^]/, "") : '';
+        
+        if (cleanCurrentVersion === cleanLatestVersion) {
+          continue;
+        }
+
+        let strippedDescription = description?.replace(/<[^>]*>/g, '').trim() || '';
+        let title = "";
+        let tooltip = `📦 ${packageName} (${sectionType}) \n  ├  by ${author} \n  ╰  ${strippedDescription}  \n \n  •  ${packageName}@${currentVersion} (current version) \n  •  ${packageName}@${latestVersion} (latest version) \n \n`;
+
         // Skip if the update type is disabled in settings
         if ((updateType === "patch" && !showPatch) ||
             (updateType === "minor" && !showMinor) ||
@@ -227,41 +250,37 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
           continue;
         }
 
-        // Update counts just once per package
-        if (updateType === "patch") {
-          patches++;
-        } else if (updateType === "minor") {
-          minors++;
-        } else if (updateType === "major") {
-          majors++;
-        }
-
-        // Create a CodeLens for each position where the package appears
-        for (const position of validPositions) {
-          const range = new vscode.Range(position.line, position.character, position.line, position.character);
-          let title = "";
-          let tooltip = `📦 ${packageName} \n  ├  by ${author} \n  ╰  ${description}  \n \n  •  ${packageName}@${currentVersion} (current version) \n  •  ${packageName}@${latestVersion} (latest version) \n \n`;
-
+        // Update counts just once per package type
+        if (!packageCounted) {
           if (updateType === "patch") {
-            title = `❇️ ${packageName} ⇢ ${latestVersion} (patch)`;
-            tooltip += `❇️ This is a PATCH update. \n  Patches usually cover bug fixes or small changes and they are safe to update.`;
+            patches++;
           } else if (updateType === "minor") {
-            title = `✴️ ${packageName} ⇢ ${latestVersion} (minor update)`;
-            tooltip += `✴️ This is a MINOR update. \n  Minor versions contain backward compatible API changes/additions. \n  Test the functionality after updating.`;
+            minors++;
           } else if (updateType === "major") {
-            title = `🛑 ${packageName} ⇢ ${latestVersion} (major update)`;
-            tooltip += `🛑 This is a MAJOR update. \n  Major versions contain backward incompatible changes, which could break your code. \n  Test the functionality thoroughly after updating.`;
+            majors++;
           }
-
-          codeLenses.push(
-            new vscode.CodeLens(range, {
-              title,
-              tooltip,
-              command: "update-now.updateDependency",
-              arguments: [document.uri, packageName, latestVersion],
-            })
-          );
+          packageCounted = true;
         }
+
+        if (updateType === "patch") {
+          title = `❇️ ${packageName} ⇢ ${latestVersion} (patch)`;
+          tooltip += `❇️ This is a PATCH update. \n  Patches usually cover bug fixes or small changes and they are safe to update.`;
+        } else if (updateType === "minor") {
+          title = `✴️ ${packageName} ⇢ ${latestVersion} (minor update)`;
+          tooltip += `✴️ This is a MINOR update. \n  Minor versions contain backward compatible API changes/additions. \n  Test the functionality after updating.`;
+        } else if (updateType === "major") {
+          title = `🛑 ${packageName} ⇢ ${latestVersion} (major update)`;
+          tooltip += `🛑 This is a MAJOR update. \n  Major versions contain backward incompatible changes, which could break your code. \n  Test the functionality thoroughly after updating.`;
+        }
+
+        codeLenses.push(
+          new vscode.CodeLens(range, {
+            title,
+            tooltip,
+            command: "update-now.updateDependency",
+            arguments: [document.uri, packageName, latestVersion, sectionType],
+          })
+        );
       }
     }
 
@@ -332,6 +351,35 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
     }
   }
 
+  // Helper method to determine if a line is in the devDependencies section
+  private isInDevDependencies(document: vscode.TextDocument, lineNumber: number): boolean {
+    const text = document.getText();
+    const lines = text.split("\n");
+    
+    // Go backward from the current line to find section identifier
+    for (let i = lineNumber; i >= 0; i--) {
+      const line = lines[i].trim();
+      
+      // Found devDependencies section
+      if (line.includes('"devDependencies"')) {
+        return true;
+      }
+      
+      // Found dependencies section
+      if (line.includes('"dependencies"')) {
+        return false;
+      }
+      
+      // If we hit the end of a section, stop searching
+      if (line === '}' && (i > 0 && lines[i-1].includes('}'))) {
+        return false;
+      }
+    }
+    
+    // Default to regular dependencies if we can't determine
+    return false;
+  }
+
   refreshCodeLenses = debounce(async (document: vscode.TextDocument) => {
     // Just trigger the CodeLens refresh without clearing cache
     this._onDidChangeCodeLenses.fire();
@@ -344,14 +392,29 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
   }, 50);
 }
 
-async function updateDependency(this: any, context: vscode.ExtensionContext, documentUri: vscode.Uri, packageName: string, latestVersion: string, showNotification: boolean = true): Promise<void> {
+async function updateDependency(this: any, context: vscode.ExtensionContext, documentUri: vscode.Uri, packageName: string, latestVersion: string, sectionType: string = 'dependencies', showNotification: boolean = true): Promise<void> {
   const document = await vscode.workspace.openTextDocument(documentUri);
   const text = document.getText();
   const packageJson = JSON.parse(text);
-  const currentVersion = packageJson.dependencies[packageName] || packageJson.devDependencies[packageName];
+  
+  // Use the specified section type or fall back to finding it
+  let currentVersion: string | undefined;
+  if (sectionType === 'devDependencies') {
+    currentVersion = packageJson.devDependencies?.[packageName];
+  } else if (sectionType === 'dependencies') {
+    currentVersion = packageJson.dependencies?.[packageName];
+  } else {
+    // Fallback to either section if not specified
+    currentVersion = packageJson.dependencies?.[packageName] || packageJson.devDependencies?.[packageName];
+    
+    // Determine which section contains this package
+    if (currentVersion) {
+      sectionType = packageJson.dependencies?.[packageName] ? 'dependencies' : 'devDependencies';
+    }
+  }
 
   if (!currentVersion) {
-    vscode.window.showErrorMessage(`Current version for package ${packageName} not found.`);
+    vscode.window.showErrorMessage(`Current version for package ${packageName} not found in ${sectionType}.`);
     return;
   }
 
@@ -380,9 +443,10 @@ async function updateDependency(this: any, context: vscode.ExtensionContext, doc
     updatedVersion = prefixedVersion;
   }
 
-  if (packageJson.dependencies[packageName]) {
+  // Only update the specified section
+  if (sectionType === 'dependencies' && packageJson.dependencies?.[packageName]) {
     packageJson.dependencies[packageName] = updatedVersion;
-  } else if (packageJson.devDependencies[packageName]) {
+  } else if (sectionType === 'devDependencies' && packageJson.devDependencies?.[packageName]) {
     packageJson.devDependencies[packageName] = updatedVersion;
   }
 
@@ -446,46 +510,72 @@ async function updateAllDependencies(context: vscode.ExtensionContext, documentU
 
   logger.debug('Initial package.json state:', { dependencies, devDependencies });
 
-  for (const packageName in { ...dependencies, ...devDependencies }) {
+  // Process regular dependencies
+  for (const packageName in dependencies) {
     try {
-      logger.info(`Processing package: ${packageName}`);
-      const currentVersion = dependencies[packageName] || devDependencies[packageName];
+      logger.info(`Processing package in dependencies: ${packageName}`);
+      const currentVersion = dependencies[packageName];
       
       if (isURL(currentVersion)) {
         logger.info(`Skipping ${packageName} - URL dependency`);
         continue;
       }
 
-      const latestVersionData = storedDependencies[packageName] && Date.now() - storedDependencies[packageName].timestamp < ONE_DAY_IN_MS
-        ? storedDependencies[packageName]
-        : (await getLatestVersion(packageName)) as VersionInfo | null;
+      await processPackageUpdate(packageName, currentVersion, 'dependencies');
+    } catch (error) {
+      logger.error(`Error processing package ${packageName} in dependencies`, error);
+    }
+  }
 
-      logger.debug(`Latest version data for ${packageName}:`, latestVersionData);
+  // Process dev dependencies
+  for (const packageName in devDependencies) {
+    try {
+      logger.info(`Processing package in devDependencies: ${packageName}`);
+      const currentVersion = devDependencies[packageName];
+      
+      if (isURL(currentVersion)) {
+        logger.info(`Skipping ${packageName} - URL dependency`);
+        continue;
+      }
 
-      if (latestVersionData?.version && semver.valid(latestVersionData.version)) {
-        const strippedCurrentVersion = currentVersion.replace(/^[~^]/, "");
-        if (latestVersionData.version !== strippedCurrentVersion) {
-          const updateType = getUpdateType(currentVersion, latestVersionData.version);
-          const config = vscode.workspace.getConfiguration('update-now.codeLens');
-          const shouldUpdate = (updateType === "patch" && config.get<boolean>('patch', true)) ||
-                             (updateType === "minor" && config.get<boolean>('minor', true)) ||
-                             (updateType === "major" && config.get<boolean>('major', true));
+      await processPackageUpdate(packageName, currentVersion, 'devDependencies');
+    } catch (error) {
+      logger.error(`Error processing package ${packageName} in devDependencies`, error);
+    }
+  }
 
-          if (shouldUpdate) {
-            logger.info(`Update found for ${packageName}: ${currentVersion} -> ${latestVersionData.version}`);
+  // Helper function to process each package
+  async function processPackageUpdate(packageName: string, currentVersion: string, sectionType: string): Promise<void> {
+    const latestVersionData = storedDependencies[packageName] && Date.now() - storedDependencies[packageName].timestamp < ONE_DAY_IN_MS
+      ? storedDependencies[packageName]
+      : (await getLatestVersion(packageName)) as VersionInfo | null;
+
+    logger.debug(`Latest version data for ${packageName}:`, latestVersionData);
+
+    if (latestVersionData?.version && semver.valid(latestVersionData.version)) {
+      const strippedCurrentVersion = currentVersion.replace(/^[~^]/, "");
+      if (latestVersionData.version !== strippedCurrentVersion) {
+        const updateType = getUpdateType(currentVersion, latestVersionData.version);
+        const config = vscode.workspace.getConfiguration('update-now.codeLens');
+        const shouldUpdate = (updateType === "patch" && config.get<boolean>('patch', true)) ||
+                           (updateType === "minor" && config.get<boolean>('minor', true)) ||
+                           (updateType === "major" && config.get<boolean>('major', true));
+
+        if (shouldUpdate) {
+          logger.info(`Update found for ${packageName}: ${currentVersion} -> ${latestVersionData.version}`);
+          // Only add to the tracking list if we haven't seen it before
+          if (!dependenciesToUpdate.includes(packageName)) {
             dependenciesToUpdate.push(packageName);
-            await updateDependency(context, documentUri, packageName, latestVersionData.version, false);
-          } else {
-            logger.info(`Skipping ${packageName} - update type ${updateType} is disabled in settings`);
           }
+          await updateDependency(context, documentUri, packageName, latestVersionData.version, sectionType, false);
         } else {
-          logger.info(`No update needed for ${packageName}`);
+          logger.info(`Skipping ${packageName} - update type ${updateType} is disabled in settings`);
         }
       } else {
-        logger.info(`Skipping ${packageName} - invalid version data`);
+        logger.info(`No update needed for ${packageName}`);
       }
-    } catch (error) {
-      logger.error(`Error processing package ${packageName}`, error);
+    } else {
+      logger.info(`Skipping ${packageName} - invalid version data`);
     }
   }
 
@@ -559,8 +649,10 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.languages.registerCodeLensProvider({ language: 'json', pattern: '**/package.json' }, provider),
     vscode.window.registerWebviewViewProvider(CacheViewProvider.viewType, cacheViewProvider),
     cacheViewProvider,
-    vscode.commands.registerCommand("update-now.updateDependency", async (documentUri, packageName, latestVersion) => {
-      await updateDependency(context, documentUri, packageName, latestVersion);
+    vscode.commands.registerCommand("update-now.updateDependency", async (documentUri, packageName, latestVersion, sectionType) => {
+      // Ensure sectionType is a string
+      const section = typeof sectionType === 'string' ? sectionType : 'dependencies';
+      await updateDependency(context, documentUri, packageName, latestVersion, section);
     }),
     vscode.commands.registerCommand("update-now.updateAllDependencies", async () => {
       const editor = vscode.window.activeTextEditor;
