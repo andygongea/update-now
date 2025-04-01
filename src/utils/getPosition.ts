@@ -10,7 +10,8 @@ export function getPosition(document: vscode.TextDocument, packageName: string):
   const regex = new RegExp(`"${packageName}"\\s*:`);
   
   for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
-    if (regex.test(lines[lineIndex])) {
+    const lineMatch = lines[lineIndex].match(regex); // Perform match once
+    if (lineMatch) { // Check if match occurred
       let inDependencies = false;
       let braceCount = 0;
       
@@ -34,8 +35,8 @@ export function getPosition(document: vscode.TextDocument, packageName: string):
       
       // Only add positions that are within dependencies or devDependencies blocks
       if (inDependencies) {
-        const match = lines[lineIndex].match(regex);
-        const character = match ? lines[lineIndex].indexOf(match[0]) : 0;
+        // Use the existing lineMatch result
+        const character = lines[lineIndex].indexOf(lineMatch[0]);
         
         positions.push({
           line: lineIndex,
