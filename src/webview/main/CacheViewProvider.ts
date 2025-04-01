@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { UpdateType, IDependencyInfo, IWebviewMessage, IUpdateData } from './types';
+import { UpdateType, IDependencyInfo, IWebviewMessage, IUpdateData, SectionType, ICombinedDependency } from './types';
 import { getCacheViewTemplate } from './template';
 
 function getNonce() {
@@ -158,15 +158,45 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
         if (activeEditor && activeEditor.document.fileName.endsWith('package.json')) {
             try {
                 const packageJson = JSON.parse(activeEditor.document.getText());
-                const allDeps = { 
-                    ...packageJson.dependencies || {}, 
-                    ...packageJson.devDependencies || {} 
-                };
                 
-                // Filter dependenciesData to only include current package.json dependencies
-                for (const [name, version] of Object.entries(allDeps)) {
-                    if (dependenciesData[name]) {
-                        currentPackageDeps[name] = dependenciesData[name];
+                // Process dependencies and devDependencies separately
+                const combinedDeps: ICombinedDependency[] = [
+                    ...Object.entries(packageJson.dependencies || {}).map(([name, version]) => ({ 
+                        name, 
+                        version: version as string, 
+                        sectionType: 'dependencies' as SectionType 
+                    })),
+                    ...Object.entries(packageJson.devDependencies || {}).map(([name, version]) => ({ 
+                        name, 
+                        version: version as string, 
+                        sectionType: 'devDependencies' as SectionType 
+                    }))
+                ];
+                
+                // Track duplicate package names
+                const packageNameCounts: Record<string, number> = {};
+                combinedDeps.forEach(dep => {
+                    packageNameCounts[dep.name] = (packageNameCounts[dep.name] || 0) + 1;
+                });
+                
+                // Process each dependency with its section information
+                for (const dep of combinedDeps) {
+                    if (dependenciesData[dep.name]) {
+                        // Only add section type marker for duplicated packages
+                        const isDuplicate = packageNameCounts[dep.name] > 1;
+                        
+                        // Create a unique key for storage
+                        // For duplicates: packageName:sectionType
+                        // For non-duplicates: just packageName
+                        const key = isDuplicate ? `${dep.name}:${dep.sectionType}` : dep.name;
+                        
+                        // Create a dependency entry with section type information
+                        currentPackageDeps[key] = {
+                            ...dependenciesData[dep.name],
+                            sectionType: dep.sectionType,
+                            currentVersion: dep.version, // Ensure we have the right version for this section
+                            isDuplicate // Flag to indicate if this is a duplicate package
+                        };
                     }
                 }
             } catch (error) {
@@ -185,7 +215,18 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
         // Only count updates for the current package's dependencies
         if (Array.isArray(trackIUpdateData)) {
             trackIUpdateData
-                .filter(update => update?.packageName && currentPackageDeps[update.packageName])
+                .filter(update => {
+                    if (!update?.packageName) {
+                        return false;
+                    }
+                    
+                    // Check if package exists in any section (with or without section marker)
+                    const packageName = update.packageName.includes(':') ? 
+                        update.packageName.split(':')[0] : update.packageName;
+                    
+                    return Object.keys(currentPackageDeps).some(key => 
+                        key === packageName || key.startsWith(`${packageName}:`));
+                })
                 .forEach((update: any) => {
                     if (update?.updateType) {
                         const updateType = update.updateType.toLowerCase() as UpdateType;
@@ -197,11 +238,22 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
         }
         
         const data: IUpdateData = {
-            dependencies: currentPackageDeps,  // Only send dependencies from current package.json
-            trackUpdate: trackIUpdateData.filter(update => update?.packageName && currentPackageDeps[update.packageName]),  // Filter update history
+            dependencies: currentPackageDeps,
+            trackUpdate: trackIUpdateData.filter(update => {
+                if (!update?.packageName) {
+                    return false;
+                }
+                
+                // Check if package exists in any section (with or without section marker)
+                const packageName = update.packageName.includes(':') ? 
+                    update.packageName.split(':')[0] : update.packageName;
+                
+                return Object.keys(currentPackageDeps).some(key => 
+                    key === packageName || key.startsWith(`${packageName}:`));
+            }),
             timestamp: currentTime,
             analytics: updateCounts,
-            settings: settings  // Add settings to the data
+            settings: settings
         };
 
         webview.postMessage({ type: 'update', data });
@@ -217,6 +269,16 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
             return;
         }
 
+        // Extract the actual package name if it includes section info
+        const actualPackageName = packageName.includes(':') ? 
+            packageName.split(':')[0] : 
+            packageName;
+            
+        // Optionally extract section type
+        const sectionType = packageName.includes(':') ? 
+            packageName.split(':')[1] as SectionType : 
+            undefined;
+
         const text = activeEditor.document.getText();
         try {
             const packageJson = JSON.parse(text);
@@ -224,20 +286,35 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
             
             // Find the line numbers for dependencies and devDependencies sections
             let inTargetSection = false;
+            let currentSection: SectionType | undefined = undefined;
+            
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i].trim();
                 
-                // Check if we're entering or leaving a relevant section
-                if (line.includes('"dependencies"') || line.includes('"devDependencies"')) {
+                // Check if we're entering a dependencies section
+                if (line.includes('"dependencies"')) {
                     inTargetSection = true;
+                    currentSection = 'dependencies';
                     continue;
-                } else if (inTargetSection && line.startsWith('}')) {
+                } 
+                // Check if we're entering a devDependencies section
+                else if (line.includes('"devDependencies"')) {
+                    inTargetSection = true;
+                    currentSection = 'devDependencies';
+                    continue;
+                } 
+                // Check if we're leaving a section
+                else if (inTargetSection && line.startsWith('}')) {
                     inTargetSection = false;
+                    currentSection = undefined;
                     continue;
                 }
 
                 // Only search for the package if we're in a relevant section
-                if (inTargetSection && line.includes(`"${packageName}"`)) {
+                // If a specific section was requested, only look in that section
+                if (inTargetSection && 
+                    (!sectionType || sectionType === currentSection) && 
+                    line.includes(`"${actualPackageName}"`)) {
                     // Create a selection on the line
                     const position = new vscode.Position(i, 0);
                     activeEditor.selection = new vscode.Selection(position, position);
@@ -250,7 +327,7 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                 }
             }
         } catch (error) {
-            console.error('Error parsing package.json:', error);
+            console.error('Error navigating to package:', error);
         }
     }
 
@@ -422,9 +499,11 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                     const groups = { patch: [], minor: [], major: [], latest: []};
 
                     // Sort dependencies into groups
-                    Object.entries(data.dependencies).forEach(([name, info]) => {
+                    Object.entries(data.dependencies).forEach(([key, info]) => {
                         if (info.updateType in groups) {
-                            groups[info.updateType].push({ name, ...info });
+                            // Extract clean name (without section type) for display
+                            const displayName = key.includes(':') ? key.split(':')[0] : key;
+                            groups[info.updateType].push({ displayName, key, ...info });
                         }
                     });
 
@@ -458,23 +537,30 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                                 updateType + '"> Updates</span><i class="upn-stat-count">' + groups[updateType].length + '</i></h3>';
                              
                             groups[updateType]
-                                .sort((a, b) => a.name.localeCompare(b.name))
+                                .sort((a, b) => a.displayName.localeCompare(b.displayName))
                                 .forEach(info => {
                                     const div = document.createElement('div');
                                     div.className = 'dependency-item';
                                     div.onclick = () => {
                                         vscode.postMessage({ 
                                             command: 'navigateToPackage',
-                                            packageName: info.name 
+                                            packageName: info.key // Use the full key for navigation
                                         });
                                     };
+                                    
+                                    // Add section type info only for duplicated packages
+                                    const sectionInfo = info.isDuplicate && info.sectionType === "devDependencies" ? 
+                                        '<span class="upn-package-section">devDependency</span>' : 
+                                        '';
+                                        
                                     div.innerHTML = 
                                         '<p>' +
-                                        '<strong>📦 ' + info.name + '</strong> ' +
-                                        '<span class="dimmed">⇢</span> ' +
+                                        '<strong>📦 ' + info.displayName + '</strong>' +
+                                        '<span class="dimmed">⇢</span>' +
                                         '<strong>' + info.version + '</strong>' +
                                         '</p>' +
-                                        '<p class="dimmed">' + stripHtml(info.description || '') + '</p>';
+                                        '<p class="dimmed">' + stripHtml(info.description || '') + '</p>' +
+                                        sectionInfo;
                                     groupDiv.appendChild(div);
                                 });
                              
@@ -489,13 +575,19 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                         groupDiv.innerHTML = '<h3 class="group-title"><span class="update-type latest"></span></h3>';
                          
                         groups.latest
-                            .sort((a, b) => a.name.localeCompare(b.name))
+                            .sort((a, b) => a.displayName.localeCompare(b.displayName))
                             .forEach(info => {
                                 const div = document.createElement('div');
                                 div.className = 'dependency-item';
+                                
+                                // Add section type info only for duplicated packages
+                                const sectionInfo = info.isDuplicate && info.sectionType ? 
+                                    '<span class="upn-package-section">' + (info.sectionType === 'devDependencies' ? 'dev' : 'prod') + '</span>' : 
+                                    '';
+                                    
                                 div.innerHTML = 
                                     '<p>' +
-                                    '<strong>📦 ' + info.name + '</strong> ' +
+                                    '<strong>📦 ' + info.displayName + '</strong> ' + sectionInfo + ' ' +
                                     '<span class="dimmed">@</span> ' +
                                     '<strong>' + info.version + '</strong>' +
                                     '</p>' +

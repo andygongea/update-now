@@ -1,11 +1,16 @@
 /** Type of dependency update available */
 export type UpdateType = 'patch' | 'minor' | 'major' | 'latest';
 
+/** Section type of the dependency */
+export type SectionType = 'dependencies' | 'devDependencies';
+
 /** Information about a single dependency */
 export interface IDependencyInfo {
     currentVersion: string;
     latestVersion: string;
     updateType: UpdateType;
+    sectionType?: SectionType;  // Added section type information
+    isDuplicate?: boolean;      // Flag to indicate if package appears in both deps and devDeps
 }
 
 /** Message sent from webview to extension */
@@ -17,6 +22,13 @@ export interface IWebviewMessage {
         showMinor?: boolean;
         showMajor?: boolean;
     };
+}
+
+/** Combined dependency entry with package name and section */
+export interface ICombinedDependency {
+    name: string;
+    version: string;
+    sectionType: SectionType;
 }
 
 /** Message sent from extension to webview */

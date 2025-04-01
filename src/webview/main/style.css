@@ -3,6 +3,9 @@ body { padding: 0; color: var(--vscode-foreground); font-size: 1.3rem; font-fami
 p { margin: 0; line-height: 1.45; word-break: break-word; }
 .dimmed { color: var(--vscode-descriptionForeground); }
 
+/* Package section indicator for duplicated packages */
+.upn-package-section { display: inline-block; font-style: normal; padding: 1px 4px 2px; line-height: 1; background: var(--vscode-editor-background); border: 1px solid var(--vscode-panel-border); border-radius: 16px; margin: .4rem 0; }
+
 /* Header styles */
 .upn-header { padding: 10px 20px; }
 .upn-heading { display: flex; align-items: center; gap: 8px; font-size: 2rem; font-weight: 600; margin: 0; }
