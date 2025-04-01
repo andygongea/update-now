@@ -34,6 +34,8 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
   private isProcessing: boolean = false;
   private currentBatchPromises: Promise<any>[] = [];
   private document: vscode.TextDocument | null = null;
+  // Cache for parsed package.json documents
+  private packageJsonCache: Map<string, any> = new Map();
 
   private updateStatusBar(message: string, isProcessing: boolean = false) {
     if (isProcessing) {
@@ -45,6 +47,31 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
   }
 
   constructor(private context: vscode.ExtensionContext) { }
+
+  // Method to get parsed package.json with caching
+  private getPackageJson(document: vscode.TextDocument): any {
+    const docUri = document.uri.toString();
+    const docVersion = document.version;
+    const cacheKey = `${docUri}_v${docVersion}`;
+    
+    if (!this.packageJsonCache.has(cacheKey)) {
+      try {
+        const parsed = JSON.parse(document.getText());
+        this.packageJsonCache.set(cacheKey, parsed);
+        
+        // Limit cache size to avoid memory leaks
+        if (this.packageJsonCache.size > 20) {
+          const keysToDelete = Array.from(this.packageJsonCache.keys()).slice(0, 5);
+          keysToDelete.forEach(key => this.packageJsonCache.delete(key));
+        }
+      } catch (error) {
+        logger.error('Error parsing package.json:', error);
+        return {};
+      }
+    }
+    
+    return this.packageJsonCache.get(cacheKey);
+  }
 
   private async validateAndUpdateDependencies(
     document: vscode.TextDocument,
@@ -144,7 +171,7 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
     }
 
     try {
-      const packageJson = JSON.parse(document.getText());
+      const packageJson = this.getPackageJson(document);
       const allDependencies = {
         ...packageJson.dependencies || {},
         ...packageJson.devDependencies || {}
@@ -207,7 +234,7 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
 
     for (const packageName in deps) {
       const { version, description, author, updateType } = deps[packageName];
-      const packageJson = JSON.parse(document.getText());
+      const packageJson = this.getPackageJson(document);
       
       // Get positions dynamically when needed instead of storing them
       const positions = getPosition(document, packageName);
