@@ -18,6 +18,12 @@ const ONE_DAY_IN_MS = 24 * 60 * 60 * 1000;
 let statusBarItem: vscode.StatusBarItem;
 
 class DependencyCodeLensProvider implements vscode.CodeLensProvider {
+  // Precompiled regular expressions
+  private static readonly devDepsRegex = /"devDependencies"\s*:\s*\{/;
+  private static readonly depsRegex = /"dependencies"\s*:\s*\{/;
+  private static readonly braceOpenRegex = /\{/g;
+  private static readonly braceCloseRegex = /\}/g;
+  
   private _onDidChangeCodeLenses: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
   public readonly onDidChangeCodeLenses: vscode.Event<void> = this._onDidChangeCodeLenses.event;
 
@@ -356,7 +362,7 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
     }
   }
 
-  // Helper method to determine if a line is in the devDependencies section
+  // Optimized implementation of isInDevDependencies using precompiled regex
   private isInDevDependencies(document: vscode.TextDocument, lineNumber: number): boolean {
     const text = document.getText();
     const lines = text.split("\n");
@@ -366,17 +372,21 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
       const line = lines[i].trim();
       
       // Found devDependencies section
-      if (line.includes('"devDependencies"')) {
+      if (DependencyCodeLensProvider.devDepsRegex.test(line)) {
         return true;
       }
       
       // Found dependencies section
-      if (line.includes('"dependencies"')) {
+      if (DependencyCodeLensProvider.depsRegex.test(line)) {
         return false;
       }
       
+      // Count braces for nesting level detection
+      const openBraces = (line.match(DependencyCodeLensProvider.braceOpenRegex) || []).length;
+      const closeBraces = (line.match(DependencyCodeLensProvider.braceCloseRegex) || []).length;
+      
       // If we hit the end of a section, stop searching
-      if (line === '}' && (i > 0 && lines[i-1].includes('}'))) {
+      if (closeBraces > openBraces && i > 0 && lines[i-1].includes('}')) {
         return false;
       }
     }
