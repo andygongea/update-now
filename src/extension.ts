@@ -239,6 +239,11 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
           continue;
         }
 
+        // Skip if the current version is newer than or equal to the latest version
+        if (updateType === "invalid") {
+          continue;
+        }
+
         let strippedDescription = description?.replace(/<[^>]*>/g, '').trim() || '';
         let title = "";
         let tooltip = `📦 ${packageName} (${sectionType}) \n  ├  by ${author} \n  ╰  ${strippedDescription}  \n \n  •  ${packageName}@${currentVersion} (current version) \n  •  ${packageName}@${latestVersion} (latest version) \n \n`;
