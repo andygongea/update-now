@@ -296,12 +296,12 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
 
         const settingsSection = `
             <div class="settings-section">
-                <h4 class="settings-title">CodeLens settings</h4>
+                <h4 class="settings-title">CodeLens</h4>
                 <div class="settings-group">
                     <p class="dimmed">To reduce the number of CodeLens, you can choose which update types to show.</p>
                     <div class="setting-item">
                         <label class="setting-label">
-                            <span class="setting-title">❇️ Show CodeLens for Patch updates </span>
+                            <span class="setting-title">❇️ Show Patch updates </span>
                             <div class="switch">
                                 <input type="checkbox" id="showPatch" class="setting-checkbox">
                                 <span class="slider"></span>
@@ -310,7 +310,7 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                     </div>
                     <div class="setting-item">
                         <label class="setting-label">
-                            <span class="setting-title">✴️ Show CodeLens for Minor updates </span>
+                            <span class="setting-title">✴️ Show Minor updates </span>
                             <div class="switch">
                                 <input type="checkbox" id="showMinor" class="setting-checkbox">
                                 <span class="slider"></span>
@@ -319,7 +319,7 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                     </div>
                     <div class="setting-item">
                         <label class="setting-label">
-                            <span class="setting-title">🛑 Show CodeLens for Major updates </span>
+                            <span class="setting-title">🛑 Show Major updates </span>
                             <div class="switch">
                                 <input type="checkbox" id="showMajor" class="setting-checkbox">
                                 <span class="slider"></span>
@@ -416,7 +416,7 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                     const totalCount = Object.keys(data.dependencies).length;
                     const titleElement = document.querySelector('#upn-cached-count');
                     if (titleElement) {
-                        titleElement.textContent = 'Dependencies Data (' + totalCount + ')';
+                        titleElement.textContent = 'Cached dependencies (' + totalCount + ')';
                     }
                     
                     const groups = { patch: [], minor: [], major: [], latest: []};

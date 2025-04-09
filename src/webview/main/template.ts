@@ -67,7 +67,7 @@ export function getCacheViewTemplate(
                     </div>
                 </div>
                 <div class="upn-footer">
-                    <h3 class="upn-footer-title">⚙️ Update Now Settings</h3>
+                    <h3 class="upn-footer-title">⚙️ Settings</h3>
 
                     <div class="upn-footer-section">
                         <div class="settings-section">
