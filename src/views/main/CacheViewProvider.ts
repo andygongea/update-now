@@ -95,6 +95,9 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                 case 'navigateToPackage':
                     this._navigateToPackage(message.packageName || '');
                     return;
+                case 'showCacheData':
+                    vscode.commands.executeCommand('update-now.showCacheData');
+                    return;
                 case 'updateSettings':
                     if (message.settings) {
                         const config = vscode.workspace.getConfiguration('update-now.codeLens');
@@ -620,6 +623,16 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                     clearCacheBtn.addEventListener('click', () => {
                         vscode.postMessage({
                             command: 'clearCache'
+                        });
+                    });
+                }
+                
+                // Add show cache data button listener
+                const showCacheDataBtn = document.querySelector('.upn-show-cache-data');
+                if (showCacheDataBtn) {
+                    showCacheDataBtn.addEventListener('click', () => {
+                        vscode.postMessage({
+                            command: 'showCacheData'
                         });
                     });
                 }
