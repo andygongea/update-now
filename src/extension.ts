@@ -201,7 +201,7 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
     const packageJson = JSON.parse(documentText);
 
     for (const packageName in deps) {
-      const { version, description, author, updateType } = deps[packageName];
+      const { version, description, author } = deps[packageName];
       
       // Get positions dynamically when needed instead of storing them
       const positions = getPosition(document, packageName);
@@ -237,18 +237,21 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
           continue;
         }
 
+        // Calculate update type dynamically
+        const calculatedUpdateType = getUpdateType(currentVersion, latestVersion || '');
+
         // Skip if the update type is disabled in settings
-        if ((updateType === "patch" && !showPatch) ||
-            (updateType === "minor" && !showMinor) ||
-            (updateType === "major" && !showMajor)) {
+        if ((calculatedUpdateType === "patch" && !showPatch) ||
+            (calculatedUpdateType === "minor" && !showMinor) ||
+            (calculatedUpdateType === "major" && !showMajor)) {
           continue;
         }
 
         // Update counts just once per package type
-        if (!packageCounted && (updateType === "patch" || updateType === "minor" || updateType === "major")) {
+        if (!packageCounted && (calculatedUpdateType === "patch" || calculatedUpdateType === "minor" || calculatedUpdateType === "major")) {
           // Increment the count for this update type
-          const currentCount = updateCounts.get(updateType as UpdateType) || 0;
-          updateCounts.set(updateType as UpdateType, currentCount + 1);
+          const currentCount = updateCounts.get(calculatedUpdateType as UpdateType) || 0;
+          updateCounts.set(calculatedUpdateType as UpdateType, currentCount + 1);
           packageCounted = true;
         }
 
@@ -262,8 +265,7 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
           currentVersion,
           latestVersion || '',
           description,
-          author,
-          updateType as UpdateType
+          author
         );
       }
     }
@@ -348,8 +350,7 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
     currentVersion: string,
     latestVersion: string,
     description?: string | null | undefined,
-    author?: string | null | undefined,
-    updateType?: UpdateType | null | undefined
+    author?: string | null | undefined
   ): void {
     const range = new vscode.Range(position.line, position.character, position.line, position.character);
     
@@ -359,13 +360,16 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
     let title = "";
     let tooltip = `📦 ${packageName} (${sectionType}) \n  ├  by ${displayAuthor} \n  ╰  ${strippedDescription}  \n \n  •  ${packageName}@${currentVersion} (current version) \n  •  ${packageName}@${latestVersion} (latest version) \n \n`;
 
-    if (updateType && updateType === "patch") {
+    // Calculate update type dynamically
+    const updateType = getUpdateType(currentVersion, latestVersion);
+
+    if (updateType === "patch") {
       title = `❇️ ${packageName} ⇢ ${latestVersion} (patch)`;
       tooltip += `❇️ This is a PATCH update. \n  Patches usually cover bug fixes or small changes and they are safe to update.`;
-    } else if (updateType && updateType === "minor") {
+    } else if (updateType === "minor") {
       title = `✴️ ${packageName} ⇢ ${latestVersion} (minor update)`;
       tooltip += `✴️ This is a MINOR update. \n  Minor versions contain backward compatible API changes/additions. \n  Test the functionality after updating.`;
-    } else if (updateType && updateType === "major") {
+    } else if (updateType === "major") {
       title = `🛑 ${packageName} ⇢ ${latestVersion} (major update)`;
       tooltip += `🛑 This is a MAJOR update. \n  Major versions contain backward incompatible changes, which could break your code. \n  Test the functionality thoroughly after updating.`;
     }
