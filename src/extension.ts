@@ -53,9 +53,9 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
     this.totalDependencies = Object.keys(dependencies).length;
     this.currentDependency = 0;
     const estimatedMinutes = Math.ceil(this.totalDependencies / 20);
-    
+
     this.updateStatusBar(`Checking ${this.totalDependencies} dependencies (~${estimatedMinutes} min)`, true);
-    
+
     for (const [packageName, currentVersion] of Object.entries(dependencies)) {
       const storedDependency = storedDependencies[packageName];
       const needsUpdate = !storedDependency || currentTime - storedDependency.timestamp >= ONE_DAY_IN_MS || storedDependency.version === null;
@@ -66,22 +66,22 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
         const remainingMinutes = Math.ceil(remainingDeps / 20);
         const timeText = remainingMinutes > 0 ? `~${remainingMinutes} min remaining` : 'less than 1 min remaining';
         this.updateStatusBar(`Fetching [${Math.max(1, this.currentDependency - 19)}...${this.currentDependency}] of ${this.totalDependencies} dependencies (${timeText})`, true);
-        
+
         const promise = this.updateDependencyData(document, packageName, currentVersion);
         updatePromises.push(promise);
         this.currentBatchPromises.push(promise);
-        
+
         // When we reach 20 dependencies or it's the last one, process the current batch
         if (this.currentBatchPromises.length === 20 || this.currentDependency === this.totalDependencies) {
           await Promise.all(this.currentBatchPromises);
           await this.context.workspaceState.update('dependenciesData', this.dependenciesData);
-          
+
           // Refresh CodeLens and Cache View after each batch
           this.refreshCodeLenses(this.document);
           if (cacheViewProvider) {
             cacheViewProvider.refresh();
           }
-          
+
           this.currentBatchPromises = [];
         }
       } else {
@@ -101,9 +101,9 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
     } else {
       this.updateStatusBar(`✅ All up to date`);
     }
-    
+
     this.isProcessing = false;
-    
+
     // Final refresh of Cache View
     if (cacheViewProvider) {
       cacheViewProvider.refresh();
@@ -111,15 +111,15 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
   }
 
   private updateStoredDependency(
-    packageName: string, 
-    currentVersion: string, 
+    packageName: string,
+    currentVersion: string,
     storedDependency: IDependencyData
   ): void {
     const updatedData = {
       ...storedDependency,
       updateType: getUpdateType(currentVersion, storedDependency.version || '') as UpdateType
     };
-    
+
     this.dependenciesData[packageName] = updatedData;
   }
 
@@ -182,7 +182,7 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
 
   private addCodeLenses(codeLenses: vscode.CodeLens[], document: vscode.TextDocument) {
     const deps = this.dependenciesData;
-    
+
     // Performance optimization: Use Map for counting updates
     const updateCounts = new Map<UpdateType, number>([
       [UpdateType.patch, 0],
@@ -202,13 +202,13 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
 
     for (const packageName in deps) {
       const { version, description, author } = deps[packageName];
-      
+
       // Get positions dynamically when needed instead of storing them
       const positions = getPosition(document, packageName);
-      
+
       // Check if we have valid positions in dependencies or devDependencies sections
       const validPositions = positions?.filter((pos: IPackagePosition) => pos.inDependencies && pos.line !== -1) || [];
-      
+
       if (validPositions.length === 0) {
         continue; // Skip if no valid positions found
       }
@@ -221,17 +221,17 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
         const isDev = this.isInDevDependencies(document, position.line);
         const sectionType = isDev ? 'devDependencies' : 'dependencies';
         const currentVersion = packageJson[sectionType]?.[packageName];
-        
+
         if (!currentVersion) {
           continue;
         }
 
         const latestVersion = version;
-        
+
         // Skip if the package in this section is already at the latest version
         const cleanCurrentVersion = currentVersion.replace(/^[~^]/, "");
         const cleanLatestVersion = latestVersion ? latestVersion.replace(/^[~^]/, "") : '';
-        
+
         if (cleanCurrentVersion === cleanLatestVersion) {
           continue;
         }
@@ -241,8 +241,8 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
 
         // Skip if the update type is disabled in settings
         if ((calculatedUpdateType === "patch" && !showPatch) ||
-            (calculatedUpdateType === "minor" && !showMinor) ||
-            (calculatedUpdateType === "major" && !showMajor)) {
+          (calculatedUpdateType === "minor" && !showMinor) ||
+          (calculatedUpdateType === "major" && !showMajor)) {
           continue;
         }
 
@@ -251,30 +251,33 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
           // Increment the count for this update type
           const currentCount = updateCounts.get(calculatedUpdateType as UpdateType) || 0;
           updateCounts.set(calculatedUpdateType as UpdateType, currentCount + 1);
+
+
+          // Add CodeLens for this position
+          this.addIndividualCodeLens(
+            codeLenses,
+            document,
+            packageName,
+            position,
+            sectionType,
+            currentVersion,
+            latestVersion || '',
+            description,
+            author
+          );
         }
 
-        // Add CodeLens for this position
-        this.addIndividualCodeLens(
-          codeLenses,
-          document,
-          packageName,
-          position,
-          sectionType,
-          currentVersion,
-          latestVersion || '',
-          description,
-          author
-        );
+
       }
     }
 
     const summaryRange = new vscode.Range(0, 0, 0, 0);
-    
+
     // Handle disabled CodeLens notification
     const disabledTypes = [];
-    if (!showPatch) {disabledTypes.push("patch");}
-    if (!showMinor) {disabledTypes.push("minor");}
-    if (!showMajor) {disabledTypes.push("major");}
+    if (!showPatch) { disabledTypes.push("patch"); }
+    if (!showMinor) { disabledTypes.push("minor"); }
+    if (!showMajor) { disabledTypes.push("major"); }
 
     const totalUpdates = (updateCounts.get(UpdateType.patch) || 0) + (updateCounts.get(UpdateType.minor) || 0) + (updateCounts.get(UpdateType.major) || 0);
     if (totalUpdates > 0) {
@@ -322,7 +325,7 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
             command: ""
           })
         );
-        
+
         if (disabledTypes.length > 0) {
           codeLenses.unshift(
             new vscode.CodeLens(summaryRange, {
@@ -351,7 +354,7 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
     author?: string | null | undefined
   ): void {
     const range = new vscode.Range(position.line, position.character, position.line, position.character);
-    
+
     // Safely handle potentially null/undefined values
     const displayAuthor = author || "various contributors";
     let strippedDescription = description ? description.replace(/<[^>]*>/g, '').trim() : '';
@@ -386,27 +389,27 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
   private isInDevDependencies(document: vscode.TextDocument, lineNumber: number): boolean {
     const text = document.getText();
     const lines = text.split("\n");
-    
+
     // Go backward from the current line to find section identifier
     for (let i = lineNumber; i >= 0; i--) {
       const line = lines[i].trim();
-      
+
       // Found devDependencies section
       if (line.includes('"devDependencies"')) {
         return true;
       }
-      
+
       // Found dependencies section
       if (line.includes('"dependencies"')) {
         return false;
       }
-      
+
       // If we hit the end of a section, stop searching
-      if (line === '}' && (i > 0 && lines[i-1].includes('}'))) {
+      if (line === '}' && (i > 0 && lines[i - 1].includes('}'))) {
         return false;
       }
     }
-    
+
     // Default to regular dependencies if we can't determine
     return false;
   }
@@ -414,10 +417,10 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
   refreshCodeLenses = debounce(async (document: vscode.TextDocument) => {
     // Just trigger the CodeLens refresh without clearing cache
     this._onDidChangeCodeLenses.fire();
-    
+
     // Reset only the promises array for new checks
     this.promises = [];
-    
+
     // Let provideCodeLenses handle cache validation
     await this.provideCodeLenses(document);
   }, 50);
@@ -427,7 +430,7 @@ async function updateDependency(this: any, context: vscode.ExtensionContext, doc
   const document = await vscode.workspace.openTextDocument(documentUri);
   const text = document.getText();
   const packageJson = JSON.parse(text);
-  
+
   // Use the specified section type or fall back to finding it
   let currentVersion: string | undefined;
   if (sectionType === 'devDependencies') {
@@ -437,7 +440,7 @@ async function updateDependency(this: any, context: vscode.ExtensionContext, doc
   } else {
     // Fallback to either section if not specified
     currentVersion = packageJson.dependencies?.[packageName] || packageJson.devDependencies?.[packageName];
-    
+
     // Determine which section contains this package
     if (currentVersion) {
       sectionType = packageJson.dependencies?.[packageName] ? 'dependencies' : 'devDependencies';
@@ -461,7 +464,7 @@ async function updateDependency(this: any, context: vscode.ExtensionContext, doc
   // Compare clean versions
   const isMajorUpdate = semver.diff(cleanLatestVersion, cleanCurrentVersion) === "major";
   const versionPrefix = getVersionPrefix(currentVersion);
-  
+
   // Only apply prefix if it's not a major update and we had a prefix before
   let updatedVersion = cleanLatestVersion;
   if (!isMajorUpdate && versionPrefix) {
@@ -503,7 +506,7 @@ async function updateDependency(this: any, context: vscode.ExtensionContext, doc
   if (!Array.isArray(existingData)) {
     existingData = existingData ? [existingData] : [];
   }
-  
+
   // Add new update to the array
   await context.workspaceState.update('trackUpdate', [
     ...existingData,
@@ -546,7 +549,7 @@ async function updateAllDependencies(context: vscode.ExtensionContext, documentU
     try {
       logger.info(`Processing package in dependencies: ${packageName}`);
       const currentVersion = dependencies[packageName];
-      
+
       if (isURL(currentVersion)) {
         logger.info(`Skipping ${packageName} - URL dependency`);
         continue;
@@ -563,7 +566,7 @@ async function updateAllDependencies(context: vscode.ExtensionContext, documentU
     try {
       logger.info(`Processing package in devDependencies: ${packageName}`);
       const currentVersion = devDependencies[packageName];
-      
+
       if (isURL(currentVersion)) {
         logger.info(`Skipping ${packageName} - URL dependency`);
         continue;
@@ -589,8 +592,8 @@ async function updateAllDependencies(context: vscode.ExtensionContext, documentU
         const updateType = getUpdateType(currentVersion, latestVersionData.version);
         const config = vscode.workspace.getConfiguration('update-now.codeLens');
         const shouldUpdate = (updateType === "patch" && config.get<boolean>('patch', true)) ||
-                           (updateType === "minor" && config.get<boolean>('minor', true)) ||
-                           (updateType === "major" && config.get<boolean>('major', true));
+          (updateType === "minor" && config.get<boolean>('minor', true)) ||
+          (updateType === "major" && config.get<boolean>('major', true));
 
         if (shouldUpdate) {
           logger.info(`Update found for ${packageName}: ${currentVersion} -> ${latestVersionData.version}`);
@@ -611,7 +614,7 @@ async function updateAllDependencies(context: vscode.ExtensionContext, documentU
   }
 
   logger.info(`Processed ${dependenciesToUpdate.length} dependencies`);
-  
+
   if (dependenciesToUpdate.length === 0) {
     logger.info('No dependencies need updating');
     vscode.window.showInformationMessage("All dependencies are up to date.");
@@ -650,7 +653,7 @@ export function activate(context: vscode.ExtensionContext): void {
   // Command to enable all CodeLens types
   let enableAllCodeLensCommand = vscode.commands.registerCommand('update-now.enableAllCodeLens', () => {
     const config = vscode.workspace.getConfiguration('update-now');
-    
+
     // Update all settings in parallel
     Promise.all([
       config.update('codeLens.patch', true, true),
@@ -663,12 +666,12 @@ export function activate(context: vscode.ExtensionContext): void {
         // Refresh CodeLenses for the current document
         await provider.refreshCodeLenses(editor.document);
       }
-      
+
       // Refresh cache view if it exists
       if (cacheViewProvider) {
         await cacheViewProvider.refresh();
       }
-      
+
       vscode.window.showInformationMessage('All CodeLens types have been enabled.');
     });
   });
