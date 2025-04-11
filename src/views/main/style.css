@@ -14,13 +14,10 @@ p { margin: 0; line-height: 1.45; word-break: break-word; }
 .upn-empty-state .upn-icon { font-size: 3.2rem; margin:1rem 0;  }
 
 .update-type { display: inline-block; padding: 4px 8px; border-radius: 12px; font-size: 1.2rem; font-weight: 600; line-height: 1; text-transform: uppercase; letter-spacing: 1px; color: var(--vscode-foreground); }
-.update-type.patch { color: var(--vscode-minimapGutter-addedBackground); }
 .update-type.patch::before { content:"❇️ Patch"; font-weight: 600; }
-.update-type.minor { color: var(--vscode-editorWarning-foreground); }
 .update-type.minor::before { content:"✴️ Minor"; font-weight: 600; }
-.update-type.major { color: var(--vscode-minimapGutter-deletedBackground); }
 .update-type.major::before { content:"🛑 Major"; font-weight: 600; }
-.update-type.latest::before { color: var(--vscode-foreground); content:"✅ Up to date packages"; font-weight: 600; }
+.update-type.latest::before { content:"✅ Up to date packages"; font-weight: 600; }
 
 .dependency-item { margin-bottom: -1px; padding: 10px; border: 1px solid var(--vscode-panel-border); border-radius: 0; }
 .dependency-item:first-of-type { border-radius: 4px 4px 0 0; }

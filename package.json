@@ -102,7 +102,7 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./ && if not exist out\\webview\\main mkdir out\\webview\\main && copy src\\webview\\main\\style.css out\\webview\\main\\style.css",
+    "compile": "tsc -p ./ && powershell -Command \"New-Item -ItemType Directory -Force -Path out\\views\\main; Copy-Item -Path src\\views\\main\\style.css -Destination out\\views\\main\"",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src/**/*.ts",

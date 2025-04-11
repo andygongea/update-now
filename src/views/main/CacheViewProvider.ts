@@ -288,7 +288,7 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
     }
 
     private _getMediaUrl(fileName: string): vscode.Uri {
-        return this._webview!.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'out', 'webview', fileName));
+        return this._webview!.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'out', 'views', fileName));
     }
 
     private _getHtmlForWebview(webview: vscode.Webview) {
