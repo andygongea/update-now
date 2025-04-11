@@ -57,9 +57,7 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
     
     for (const [packageName, currentVersion] of Object.entries(dependencies)) {
       const storedDependency = storedDependencies[packageName];
-      const needsUpdate = !storedDependency || 
-                         currentTime - storedDependency.timestamp >= ONE_DAY_IN_MS || 
-                         storedDependency.version === null;
+      const needsUpdate = !storedDependency || currentTime - storedDependency.timestamp >= ONE_DAY_IN_MS || storedDependency.version === null;
 
       if (needsUpdate) {
         this.currentDependency++;
@@ -212,8 +210,6 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
 
       // Create a CodeLens for each position where the package appears
       for (const position of validPositions) {
-        const range = new vscode.Range(position.line, position.character, position.line, position.character);
-        
         // Determine if this position is in dependencies or devDependencies
         const isDev = this.isInDevDependencies(document, position.line);
         const sectionType = isDev ? 'devDependencies' : 'dependencies';
@@ -232,10 +228,6 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
         if (cleanCurrentVersion === cleanLatestVersion) {
           continue;
         }
-
-        let strippedDescription = description?.replace(/<[^>]*>/g, '').trim() || '';
-        let title = "";
-        let tooltip = `📦 ${packageName} (${sectionType}) \n  ├  by ${author} \n  ╰  ${strippedDescription}  \n \n  •  ${packageName}@${currentVersion} (current version) \n  •  ${packageName}@${latestVersion} (latest version) \n \n`;
 
         // Skip if the update type is disabled in settings
         if ((updateType === "patch" && !showPatch) ||
@@ -256,24 +248,18 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
           packageCounted = true;
         }
 
-        if (updateType === "patch") {
-          title = `❇️ ${packageName} ⇢ ${latestVersion} (patch)`;
-          tooltip += `❇️ This is a PATCH update. \n  Patches usually cover bug fixes or small changes and they are safe to update.`;
-        } else if (updateType === "minor") {
-          title = `✴️ ${packageName} ⇢ ${latestVersion} (minor update)`;
-          tooltip += `✴️ This is a MINOR update. \n  Minor versions contain backward compatible API changes/additions. \n  Test the functionality after updating.`;
-        } else if (updateType === "major") {
-          title = `🛑 ${packageName} ⇢ ${latestVersion} (major update)`;
-          tooltip += `🛑 This is a MAJOR update. \n  Major versions contain backward incompatible changes, which could break your code. \n  Test the functionality thoroughly after updating.`;
-        }
-
-        codeLenses.push(
-          new vscode.CodeLens(range, {
-            title,
-            tooltip,
-            command: "update-now.updateDependency",
-            arguments: [document.uri, packageName, latestVersion, sectionType],
-          })
+        // Add CodeLens for this position
+        this.addIndividualCodeLens(
+          codeLenses,
+          document,
+          packageName,
+          position,
+          sectionType,
+          currentVersion,
+          latestVersion || '',
+          description,
+          author,
+          updateType as UpdateType
         );
       }
     }
@@ -343,6 +329,50 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
         }
       }
     }
+  }
+
+  /**
+   * Creates an individual CodeLens for a specific package and position
+   */
+  private addIndividualCodeLens(
+    codeLenses: vscode.CodeLens[],
+    document: vscode.TextDocument,
+    packageName: string,
+    position: IPackagePosition,
+    sectionType: string,
+    currentVersion: string,
+    latestVersion: string,
+    description?: string | null | undefined,
+    author?: string | null | undefined,
+    updateType?: UpdateType | null | undefined
+  ): void {
+    const range = new vscode.Range(position.line, position.character, position.line, position.character);
+    
+    // Safely handle potentially null/undefined values
+    const displayAuthor = author || "various contributors";
+    let strippedDescription = description ? description.replace(/<[^>]*>/g, '').trim() : '';
+    let title = "";
+    let tooltip = `📦 ${packageName} (${sectionType}) \n  ├  by ${displayAuthor} \n  ╰  ${strippedDescription}  \n \n  •  ${packageName}@${currentVersion} (current version) \n  •  ${packageName}@${latestVersion} (latest version) \n \n`;
+
+    if (updateType && updateType === "patch") {
+      title = `❇️ ${packageName} ⇢ ${latestVersion} (patch)`;
+      tooltip += `❇️ This is a PATCH update. \n  Patches usually cover bug fixes or small changes and they are safe to update.`;
+    } else if (updateType && updateType === "minor") {
+      title = `✴️ ${packageName} ⇢ ${latestVersion} (minor update)`;
+      tooltip += `✴️ This is a MINOR update. \n  Minor versions contain backward compatible API changes/additions. \n  Test the functionality after updating.`;
+    } else if (updateType && updateType === "major") {
+      title = `🛑 ${packageName} ⇢ ${latestVersion} (major update)`;
+      tooltip += `🛑 This is a MAJOR update. \n  Major versions contain backward incompatible changes, which could break your code. \n  Test the functionality thoroughly after updating.`;
+    }
+
+    codeLenses.push(
+      new vscode.CodeLens(range, {
+        title,
+        tooltip,
+        command: "update-now.updateDependency",
+        arguments: [document.uri, packageName, latestVersion, sectionType],
+      })
+    );
   }
 
   // Helper method to determine if a line is in the devDependencies section
