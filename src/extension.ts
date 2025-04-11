@@ -213,8 +213,7 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
         continue; // Skip if no valid positions found
       }
 
-      // Track whether we've already counted this package for statistics
-      let packageCounted = false;
+      // Count each instance of a package (could appear in both dependencies and devDependencies)
 
       // Create a CodeLens for each position where the package appears
       for (const position of validPositions) {
@@ -247,12 +246,11 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
           continue;
         }
 
-        // Update counts just once per package type
-        if (!packageCounted && (calculatedUpdateType === "patch" || calculatedUpdateType === "minor" || calculatedUpdateType === "major")) {
+        // Update counts for this package instance
+        if (calculatedUpdateType === "patch" || calculatedUpdateType === "minor" || calculatedUpdateType === "major") {
           // Increment the count for this update type
           const currentCount = updateCounts.get(calculatedUpdateType as UpdateType) || 0;
           updateCounts.set(calculatedUpdateType as UpdateType, currentCount + 1);
-          packageCounted = true;
         }
 
         // Add CodeLens for this position
@@ -278,7 +276,7 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
     if (!showMinor) {disabledTypes.push("minor");}
     if (!showMajor) {disabledTypes.push("major");}
 
-    const totalUpdates = updateCounts.get(UpdateType.patch)! + updateCounts.get(UpdateType.minor)! + updateCounts.get(UpdateType.major)!;
+    const totalUpdates = (updateCounts.get(UpdateType.patch) || 0) + (updateCounts.get(UpdateType.minor) || 0) + (updateCounts.get(UpdateType.major) || 0);
     if (totalUpdates > 0) {
       // Add disabled types notification if any
       if (disabledTypes.length > 0) {
