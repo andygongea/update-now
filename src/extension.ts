@@ -9,13 +9,12 @@ import { VersionInfo, IDependencyData, UpdateType, IPackagePosition } from "./ut
 import semver from "semver";
 import { incrementUpgradeCount } from "./utils/incrementUpgradeCount";
 import { getPosition } from "./utils/getPosition";
-import { CacheViewProvider } from './webview/main/CacheViewProvider';
+import { CacheViewProvider } from './views/main/CacheViewProvider';
 import { logger } from './utils/logger';
 import { isURL } from './utils/isURL';
+import { initializeStatusBar, updateStatusBar } from './views/statusBar';
 
 const ONE_DAY_IN_MS = 24 * 60 * 60 * 1000;
-
-let statusBarItem: vscode.StatusBarItem;
 
 class DependencyCodeLensProvider implements vscode.CodeLensProvider {
   private _onDidChangeCodeLenses: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
@@ -30,12 +29,7 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
   private document: vscode.TextDocument | null = null;
 
   private updateStatusBar(message: string, isProcessing: boolean = false) {
-    if (isProcessing) {
-      statusBarItem.text = `⇪ Update Now: $(sync~spin) ${message}`;
-    } else {
-      statusBarItem.text = `⇪ Update Now: ${message}`;
-    }
-    statusBarItem.tooltip = "Updates across your scanned package.json files";
+    updateStatusBar(message, isProcessing);
   }
 
   constructor(private context: vscode.ExtensionContext) { }
@@ -72,7 +66,7 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
         const remainingDeps = this.totalDependencies - this.currentDependency;
         const remainingMinutes = Math.ceil(remainingDeps / 20);
         const timeText = remainingMinutes > 0 ? `~${remainingMinutes} min remaining` : 'less than 1 min remaining';
-        this.updateStatusBar(`Checking dependencies [${Math.max(1, this.currentDependency - 19)}...${this.currentDependency}] of ${this.totalDependencies} (${timeText})`, true);
+        this.updateStatusBar(`Fetching [${Math.max(1, this.currentDependency - 19)}...${this.currentDependency}] of ${this.totalDependencies} dependencies (${timeText})`, true);
         
         const promise = this.updateDependencyData(document, packageName, currentVersion);
         updatePromises.push(promise);
@@ -593,12 +587,8 @@ async function updateAllDependencies(context: vscode.ExtensionContext, documentU
 let cacheViewProvider: CacheViewProvider;
 
 export function activate(context: vscode.ExtensionContext): void {
-  // Create status bar item
-  statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
-  statusBarItem.text = "⇪ Update Now: ✅ Ready";
-  statusBarItem.tooltip = "Updates across your scanned package.json files";
-  statusBarItem.show();
-  context.subscriptions.push(statusBarItem);
+  // Initialize status bar item
+  initializeStatusBar(context);
 
   context.globalState.update("dependencyUpgradeCount", 0);
 
