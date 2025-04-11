@@ -182,9 +182,13 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
 
   private addCodeLenses(codeLenses: vscode.CodeLens[], document: vscode.TextDocument) {
     const deps = this.dependenciesData;
-    let patches = 0;
-    let minors = 0;
-    let majors = 0;
+    
+    // Performance optimization: Use Map for counting updates
+    const updateCounts = new Map<UpdateType, number>([
+      [UpdateType.patch, 0],
+      [UpdateType.minor, 0],
+      [UpdateType.major, 0]
+    ]);
 
     // Get configuration settings
     const config = vscode.workspace.getConfiguration('update-now.codeLens');
@@ -192,9 +196,12 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
     const showMinor = config.get<boolean>('minor', true);
     const showMajor = config.get<boolean>('major', true);
 
+    // Performance optimization: Get document text and parse JSON once outside the loop
+    const documentText = document.getText();
+    const packageJson = JSON.parse(documentText);
+
     for (const packageName in deps) {
       const { version, description, author, updateType } = deps[packageName];
-      const packageJson = JSON.parse(document.getText());
       
       // Get positions dynamically when needed instead of storing them
       const positions = getPosition(document, packageName);
@@ -238,14 +245,10 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
         }
 
         // Update counts just once per package type
-        if (!packageCounted) {
-          if (updateType === "patch") {
-            patches++;
-          } else if (updateType === "minor") {
-            minors++;
-          } else if (updateType === "major") {
-            majors++;
-          }
+        if (!packageCounted && (updateType === "patch" || updateType === "minor" || updateType === "major")) {
+          // Increment the count for this update type
+          const currentCount = updateCounts.get(updateType as UpdateType) || 0;
+          updateCounts.set(updateType as UpdateType, currentCount + 1);
           packageCounted = true;
         }
 
@@ -273,7 +276,8 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
     if (!showMinor) {disabledTypes.push("minor");}
     if (!showMajor) {disabledTypes.push("major");}
 
-    if (patches + minors + majors > 0) {
+    const totalUpdates = updateCounts.get(UpdateType.patch)! + updateCounts.get(UpdateType.minor)! + updateCounts.get(UpdateType.major)!;
+    if (totalUpdates > 0) {
       // Add disabled types notification if any
       if (disabledTypes.length > 0) {
         codeLenses.unshift(
@@ -284,8 +288,8 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
           })
         );
       }
-      const summaryTitle = `⇪ Update Now: ${patches + minors + majors
-        } updates available (❇️ ${patches} x patch, ✴️ ${minors} x minor, 🛑 ${majors} x major)`;
+      const summaryTitle = `⇪ Update Now: ${totalUpdates
+        } updates available (❇️ ${updateCounts.get(UpdateType.patch)} x patch, ✴️ ${updateCounts.get(UpdateType.minor)} x minor, 🛑 ${updateCounts.get(UpdateType.major)} x major)`;
 
       codeLenses.unshift(
         new vscode.CodeLens(summaryRange, {
