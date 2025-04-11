@@ -10,8 +10,10 @@ p { margin: 0; line-height: 1.45; word-break: break-word; }
 .upn-warning { padding: 8px 12px; border: 1px solid var(--vscode-panel-border); border-radius: 4px; margin-top:1rem; background: var(--vscode-editor-background);  }
 .upn-warning .upn-message { line-height:1.6; }
 
-.upn-empty-state { display: flex; flex-direction: column; align-items: center; padding: 20px; border: 2px dashed var(--vscode-panel-border); border-radius: 4px; margin:2rem;  }
+.upn-empty-state { display: flex; flex-direction: column; align-items: center; padding: 20px; border: 2px dashed var(--vscode-panel-border); border-radius: 4px; margin:2rem; text-align: center;  }
+.upn-empty-state:hover { background-color: rgba(0,0,0,.1); cursor: pointer;  }
 .upn-empty-state .upn-icon { font-size: 3.2rem; margin:1rem 0;  }
+.upn-empty-state .dimmed { margin-top:1rem;  }
 
 .update-type { display: inline-block; padding: 4px 8px; border-radius: 12px; font-size: 1.2rem; font-weight: 600; line-height: 1; text-transform: uppercase; letter-spacing: 1px; color: var(--vscode-foreground); }
 .update-type.patch::before { content:"❇️ Patch"; font-weight: 600; }

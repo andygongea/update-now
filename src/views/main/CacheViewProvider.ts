@@ -115,6 +115,9 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                 case 'clearCache':
                     this._clearCache();
                     return;
+                case 'quickOpen':
+                    vscode.commands.executeCommand('workbench.action.quickOpen', 'package.json');
+                    return;
             }
         });
 
@@ -204,7 +207,14 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
             settings: settings  // Add settings to the data
         };
 
-        webview.postMessage({ type: 'update', data });
+        // Determine if a package is open by checking if we have any dependencies in currentPackageDeps
+    const isPackageOpen = Object.keys(currentPackageDeps).length > 0;
+    
+    webview.postMessage({ 
+        type: 'update', 
+        data,
+        isPackageOpen // Include flag to indicate if a package.json is open with dependencies
+    });
     }
 
     /**
@@ -331,10 +341,10 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
         `;
 
         const emptyStateMessage = `
-            <div class="upn-empty-state is-hidden">
+            <div class="upn-empty-state">
                 <h1 class="upn-icon">📦</h1>
-                <p class="upn-message">Open a  <strong>package.json</strong> file to see dependencies data.</p>
-                <p class="upn-message dimmed">Once opened, you can see the dependencies data.</p>
+                <p class="upn-message">Open a  <strong>package.json</strong> file to see <em>latest versions</em> and <em>update type</em> for outdated packages.</p>
+                <p class="upn-message dimmed"><small>Click to open package.json</small></p>
             </div>
         `;
 
@@ -395,6 +405,15 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                     switch (message.type) {
                         case 'update':
                             updateContent(message.data);
+                            // Toggle visibility of empty state message based on whether a package is open
+                            const emptyState = document.querySelector('.upn-empty-state');
+                            if (emptyState) {
+                                if (message.isPackageOpen) {
+                                    emptyState.classList.add('is-hidden');
+                                } else {
+                                    emptyState.classList.remove('is-hidden');
+                                }
+                            }
                             break;
                     }
                 });
@@ -601,6 +620,16 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                     clearCacheBtn.addEventListener('click', () => {
                         vscode.postMessage({
                             command: 'clearCache'
+                        });
+                    });
+                }
+                
+                // Add click handler to empty state message
+                const emptyState = document.querySelector('.upn-empty-state');
+                if (emptyState) {
+                    emptyState.addEventListener('click', () => {
+                        vscode.postMessage({
+                            command: 'quickOpen'
                         });
                     });
                 }
