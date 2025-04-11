@@ -30,6 +30,11 @@ export function getUpdateType(currentValue: string | undefined, newValue: string
     return "invalid latest";
   }
 
+  // Check if current version is newer than the new version
+  if (semver.gt(currentSemver, newSemver)) {
+    return "invalid";
+  }
+
   // Compare versions using semver.diff for more accurate comparison
   const diff = semver.diff(currentSemver, newSemver);
   
