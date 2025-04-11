@@ -9,6 +9,7 @@ p { margin: 0; line-height: 1.45; word-break: break-word; }
 .upn-logo { width: 32px; height: 32px; background: url('../../../resources/logo-colored.svg') no-repeat center center; background-size: contain; display: inline-block; }
 .upn-warning { padding: 8px 12px; border: 1px solid var(--vscode-panel-border); border-radius: 4px; margin-top:1rem; background: var(--vscode-editor-background);  }
 .upn-warning .upn-message { line-height:1.6; }
+.upn-button-group { display: flex; gap: 0.8rem; margin-top: 1rem; }
 
 .upn-empty-state { display: flex; flex-direction: column; align-items: center; padding: 20px; border: 2px dashed var(--vscode-panel-border); border-radius: 4px; margin:2rem; text-align: center;  }
 .upn-empty-state:hover { background-color: rgba(0,0,0,.1); cursor: pointer;  }

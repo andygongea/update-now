@@ -10,6 +10,7 @@ import semver from "semver";
 import { incrementUpgradeCount } from "./utils/incrementUpgradeCount";
 import { getPosition } from "./utils/getPosition";
 import { CacheViewProvider } from './views/main/CacheViewProvider';
+import { CachedDataView } from './views/debug/CachedDataView';
 import { logger } from './utils/logger';
 import { isURL } from './utils/isURL';
 import { initializeStatusBar, updateStatusBar } from './views/statusBar';
@@ -615,6 +616,7 @@ async function updateAllDependencies(context: vscode.ExtensionContext, documentU
 }
 
 let cacheViewProvider: CacheViewProvider;
+let cachedDataView: CachedDataView;
 
 export function activate(context: vscode.ExtensionContext): void {
   // Initialize status bar item
@@ -624,6 +626,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   const provider = new DependencyCodeLensProvider(context);
   cacheViewProvider = new CacheViewProvider(context.extensionUri, context);
+  cachedDataView = new CachedDataView(context.extensionUri, context);
 
   vscode.workspace.findFiles('**/package.json', '**/node_modules/**').then(async (packageJsonFiles) => {
     if (packageJsonFiles.length > 0) {
@@ -692,6 +695,9 @@ export function activate(context: vscode.ExtensionContext): void {
       } catch (error) {
         console.error('[⇪ Update Now] Failed to show cache view:', error);
       }
+    }),
+    vscode.commands.registerCommand("update-now.showCacheData", () => {
+      cachedDataView.show();
     })
   );
 
