@@ -1,12 +1,7 @@
+import { VersionInfo, IDependencyData, UpdateType as UtilsUpdateType } from '../../utils/types';
+
 /** Type of dependency update available */
 export type UpdateType = 'patch' | 'minor' | 'major' | 'latest';
-
-/** Information about a single dependency */
-export interface IDependencyInfo {
-    currentVersion: string;
-    latestVersion: string;
-    updateType: UpdateType;
-}
 
 /** Message sent from webview to extension */
 export interface IWebviewMessage {
@@ -21,10 +16,10 @@ export interface IWebviewMessage {
 
 /** Message sent from extension to webview */
 export interface IUpdateData {
-    dependencies: Record<string, IDependencyInfo>;
+    dependencies: Record<string, IDependencyData>;
     trackUpdate: any[];
     timestamp: string;
-    analytics: Record<UpdateType, number>;
+    analytics: Record<UtilsUpdateType, number>;
     settings: {
         showPatch: boolean;
         showMinor: boolean;
