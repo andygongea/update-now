@@ -3,6 +3,7 @@ import { IWebviewMessage, IUpdateData } from './types';
 import { getCacheViewTemplate } from './template';
 import { getUpdateType } from '../../utils/getUpdateType';
 import { IDependencyData, UpdateType, VersionInfo } from '../../utils/types';
+import { getPosition } from '../../utils/getPosition';
 
 function getNonce() {
     let text = '';
@@ -255,40 +256,47 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
             return;
         }
 
-        const text = activeEditor.document.getText();
-        try {
-            const packageJson = JSON.parse(text);
-            const lines = text.split('\n');
+        // Split package name and version (format: @scope/name@version or name@version)
+        let baseName: string;
+        let targetVersion: string | undefined;
 
-            // Find the line numbers for dependencies and devDependencies sections
-            let inTargetSection = false;
-            for (let i = 0; i < lines.length; i++) {
-                const line = lines[i].trim();
+        const lastAtIndex = packageName.lastIndexOf('@');
+        if (lastAtIndex > 0) { // > 0 to avoid splitting on @ for scoped packages
+            targetVersion = packageName.substring(lastAtIndex + 1);
+            baseName = packageName.substring(0, lastAtIndex);
+        } else {
+            baseName = packageName;
+            targetVersion = undefined;
+        }
 
-                // Check if we're entering or leaving a relevant section
-                if (line.includes('"dependencies"') || line.includes('"devDependencies"')) {
-                    inTargetSection = true;
-                    continue;
-                } else if (inTargetSection && line.startsWith('}')) {
-                    inTargetSection = false;
-                    continue;
-                }
+        const positions = getPosition(activeEditor.document, baseName);
 
-                // Only search for the package if we're in a relevant section
-                if (inTargetSection && line.includes(`"${packageName}"`)) {
-                    // Create a selection on the line
-                    const position = new vscode.Position(i, 0);
-                    activeEditor.selection = new vscode.Selection(position, position);
-                    // Reveal the line in editor
-                    activeEditor.revealRange(
-                        new vscode.Range(position, position),
-                        vscode.TextEditorRevealType.InCenter
-                    );
-                    break;
+        if (positions.length > 0 && positions[0].line !== -1) {
+            // Find the position that matches the version if specified
+            let targetPosition = positions[0]; // Default to first position
+
+            if (targetVersion && positions.length > 1) {
+                // Check each position to find the one with matching version
+                for (const pos of positions) {
+                    const line = activeEditor.document.lineAt(pos.line).text;
+                    const version = line.match(/":\s*"([^"]+)"/)?.[1]; // Extract version from the line
+
+                    if (version === targetVersion) {
+                        targetPosition = pos;
+                        break;
+                    }
                 }
             }
-        } catch (error) {
-            console.error('Error parsing package.json:', error);
+
+            // Create a selection on the line
+            const position = new vscode.Position(targetPosition.line, targetPosition.character);
+            activeEditor.selection = new vscode.Selection(position, position);
+
+            // Reveal the line in editor
+            activeEditor.revealRange(
+                new vscode.Range(position, position),
+                vscode.TextEditorRevealType.InCenter
+            );
         }
     }
 
@@ -540,11 +548,17 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                             .forEach(info => {
                                 const div = document.createElement('div');
                                 div.className = 'dependency-item';
+                                div.onclick = () => {
+                                    vscode.postMessage({ 
+                                        command: 'navigateToPackage',
+                                        packageName: info.name 
+                                    });
+                                };
                                 div.innerHTML = 
                                     '<p>' +
                                     '<strong>📦 ' + info.name + '</strong> ' +
                                     '</p>' +
-                                    '<p class="dimmed">' + (info.description || '') + '</p>';
+                                    '<p class="dimmed">' + stripHtml(info.description || '') + '</p>';
                                 groupDiv.appendChild(div);
                             });
                          
