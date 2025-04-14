@@ -7,7 +7,7 @@ import { IDependencyData } from '../../utils/types';
  */
 export class CachedDataView implements vscode.Disposable {
   public static readonly viewType = 'cachedDataDebug';
-  
+
   private _panel: vscode.WebviewPanel | undefined;
   private _disposables: vscode.Disposable[] = [];
 
@@ -19,7 +19,7 @@ export class CachedDataView implements vscode.Disposable {
   constructor(
     private readonly _extensionUri: vscode.Uri,
     private readonly _context: vscode.ExtensionContext
-  ) {}
+  ) { }
 
   /**
    * Shows the cached data view panel
@@ -92,12 +92,12 @@ export class CachedDataView implements vscode.Disposable {
       const { version, description, author, timestamp, updateType } = data;
       const date = new Date(timestamp);
       const formattedDate = date.toLocaleString();
-      
+
       return `
         <tr>
           <td>${packageName}</td>
           <td>${version || 'N/A'}</td>
-          <td>${updateType || 'N/A'}</td>
+          <!--<td>${updateType || 'N/A'}</td>-->
           <td>${formattedDate}</td>
           <td>${author || 'N/A'}</td>
           <td class="description">${description || 'N/A'}</td>
@@ -189,14 +189,14 @@ export class CachedDataView implements vscode.Disposable {
         <div class="count">
           ${Object.keys(dependenciesData).length} dependencies cached
         </div>
-        ${Object.keys(dependenciesData).length === 0 
-          ? '<div class="empty-state">No dependency data in cache.</div>' 
-          : `<table>
+        ${Object.keys(dependenciesData).length === 0
+        ? '<div class="empty-state">No dependency data in cache.</div>'
+        : `<table>
               <thead>
                 <tr>
                   <th>Package Name</th>
                   <th>Latest Version</th>
-                  <th>Update Type</th>
+                  <!--<th>Update Type</th>-->
                   <th>Last Updated</th>
                   <th>Author</th>
                   <th>Description</th>
@@ -206,7 +206,7 @@ export class CachedDataView implements vscode.Disposable {
                 ${tableRows}
               </tbody>
             </table>`
-        }
+      }
         <script>
           (function() {
             const vscode = acquireVsCodeApi();
@@ -228,7 +228,7 @@ export class CachedDataView implements vscode.Disposable {
     if (this._panel) {
       this._panel.dispose();
     }
-    
+
     this._disposables.forEach(d => d.dispose());
     this._disposables = [];
   }

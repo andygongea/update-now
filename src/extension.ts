@@ -21,7 +21,6 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
   private _onDidChangeCodeLenses: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
   public readonly onDidChangeCodeLenses: vscode.Event<void> = this._onDidChangeCodeLenses.event;
 
-  private promises: Promise<any>[] = [];
   private dependenciesData: Record<string, IDependencyData> = {};
   private totalDependencies: number = 0;
   private currentDependency: number = 0;
@@ -417,9 +416,6 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
   refreshCodeLenses = debounce(async (document: vscode.TextDocument) => {
     // Just trigger the CodeLens refresh without clearing cache
     this._onDidChangeCodeLenses.fire();
-
-    // Reset only the promises array for new checks
-    this.promises = [];
 
     // Let provideCodeLenses handle cache validation
     await this.provideCodeLenses(document);
