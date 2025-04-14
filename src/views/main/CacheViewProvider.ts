@@ -203,7 +203,7 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
             }
         }
 
-        // Count updates by type only for current package
+        // Initialize update counts
         const updateCounts: Record<UpdateType, number> = {
             [UpdateType.patch]: 0,
             [UpdateType.minor]: 0,
@@ -214,7 +214,7 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
             [UpdateType.url]: 0
         };
 
-        // Count updates for the current package's dependencies
+        // Count updates based on current dependencies
         Object.values(currentPackageDeps).forEach(dep => {
             if (dep.updateType && typeof dep.updateType === 'string' && dep.updateType in updateCounts) {
                 updateCounts[dep.updateType as UpdateType]++;
@@ -223,7 +223,7 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
 
         const data: IUpdateData = {
             dependencies: currentPackageDeps,
-            trackUpdate: trackIUpdateData,  // Send all update history
+            trackUpdate: trackIUpdateData,
             timestamp: currentTime,
             analytics: updateCounts,
             settings: settings
@@ -604,13 +604,21 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                         historicUpdates.appendChild(historyDiv);
                     }
 
-                    // Update analytics values
-                    Object.entries(data.analytics).forEach(([updateType, count]) => {
-                        if (updateType !== 'latest') {
-                            const statElement = document.querySelector('.upn-stat-' + updateType);
-                            if (statElement) {
-                                statElement.textContent = count.toString();
+                    // Update analytics values - count performed updates from history
+                    const analyticsCount = { patch: 0, minor: 0, major: 0 };
+                    if (data.trackUpdate) {
+                        data.trackUpdate.forEach(update => {
+                            if (update.updateType && update.updateType.toLowerCase() in analyticsCount) {
+                                analyticsCount[update.updateType.toLowerCase()]++;
                             }
+                        });
+                    }
+
+                    // Update analytics display
+                    Object.entries(analyticsCount).forEach(([updateType, count]) => {
+                        const statElement = document.querySelector('.upn-stat-' + updateType);
+                        if (statElement) {
+                            statElement.textContent = count.toString();
                         }
                     });
 

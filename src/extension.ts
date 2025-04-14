@@ -491,11 +491,12 @@ async function updateDependency(this: any, context: vscode.ExtensionContext, doc
   await document.save();
 
   const storedDependencies = context.workspaceState.get<Record<string, IDependencyData>>('dependenciesData', {});
+  const updateTypeStr = getUpdateType(currentVersion, latestVersion);
   storedDependencies[packageName] = {
     ...storedDependencies[packageName],
     version: latestVersion,
     timestamp: Date.now(),
-    updateType: UpdateType.latest,
+    updateType: UpdateType[updateTypeStr as keyof typeof UpdateType],
   };
   await context.workspaceState.update('dependenciesData', storedDependencies);
 
