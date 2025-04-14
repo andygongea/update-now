@@ -150,7 +150,7 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
      */
     private async _updateContent(webview: vscode.Webview) {
         const dependenciesData = this._context.workspaceState.get<Record<string, IDependencyData>>('dependenciesData', {});
-        const trackIUpdateData = this._context.workspaceState.get<any[]>('trackUpdate', []);
+        const trackIUpdateData = this._context.workspaceState.get<any[]>('trackUpdate', []) || [];
         const currentTime = new Date().toISOString();
 
         // Get current settings
@@ -174,7 +174,7 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                             const updateTypeResult = getUpdateType(version as string, dependenciesData[name].version as string);
                             if (updateTypeResult === 'major' || updateTypeResult === 'minor' ||
                                 updateTypeResult === 'patch' || updateTypeResult === 'latest') {
-                                currentPackageDeps[name + '@' + version] = {
+                                currentPackageDeps[name] = {
                                     ...dependenciesData[name],
                                     updateType: UpdateType[updateTypeResult]
                                 };
@@ -190,7 +190,7 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                             const updateTypeResult = getUpdateType(version as string, dependenciesData[name].version as string);
                             if (updateTypeResult === 'major' || updateTypeResult === 'minor' ||
                                 updateTypeResult === 'patch' || updateTypeResult === 'latest') {
-                                currentPackageDeps[name + '@' + version] = {
+                                currentPackageDeps[name] = {
                                     ...dependenciesData[name],
                                     updateType: UpdateType[updateTypeResult]
                                 };
@@ -214,26 +214,19 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
             [UpdateType.url]: 0
         };
 
-        // Only count updates for the current package's dependencies
-        if (Array.isArray(trackIUpdateData)) {
-            trackIUpdateData
-                .filter(update => update?.packageName && currentPackageDeps[update.packageName])
-                .forEach((update: any) => {
-                    if (update?.updateType) {
-                        const updateType = update.updateType.toLowerCase() as UpdateType;
-                        if (updateType in updateCounts) {
-                            updateCounts[updateType]++;
-                        }
-                    }
-                });
-        }
+        // Count updates for the current package's dependencies
+        Object.values(currentPackageDeps).forEach(dep => {
+            if (dep.updateType && typeof dep.updateType === 'string' && dep.updateType in updateCounts) {
+                updateCounts[dep.updateType as UpdateType]++;
+            }
+        });
 
         const data: IUpdateData = {
-            dependencies: currentPackageDeps,  // Only send dependencies from current package.json
-            trackUpdate: trackIUpdateData.filter(update => update?.packageName && currentPackageDeps[update.packageName]),  // Filter update history
+            dependencies: currentPackageDeps,
+            trackUpdate: trackIUpdateData,  // Send all update history
             timestamp: currentTime,
             analytics: updateCounts,
-            settings: settings  // Add settings to the data
+            settings: settings
         };
 
         // Determine if a package is open by checking if we have any dependencies in currentPackageDeps
@@ -242,7 +235,7 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
         webview.postMessage({
             type: 'update',
             data,
-            isPackageOpen // Include flag to indicate if a package.json is open with dependencies
+            isPackageOpen
         });
     }
 
