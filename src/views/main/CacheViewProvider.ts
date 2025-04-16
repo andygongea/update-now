@@ -216,8 +216,11 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
 
         // Only count updates for the current package's dependencies
         if (Array.isArray(trackIUpdateData)) {
+            // Extract just the package names from currentPackageDeps keys (removing @version)
+            const packageNames = Object.keys(currentPackageDeps).map(key => key.split('@')[0]);
+
             trackIUpdateData
-                .filter(update => update?.packageName && currentPackageDeps[update.packageName])
+                .filter(update => update?.packageName && packageNames.includes(update.packageName))
                 .forEach((update: any) => {
                     if (update?.updateType) {
                         const updateType = update.updateType.toLowerCase() as UpdateType;
@@ -228,9 +231,12 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                 });
         }
 
+        // Extract package names for filtering
+        const packageNames = Object.keys(currentPackageDeps).map(key => key.split('@')[0]);
+
         const data: IUpdateData = {
             dependencies: currentPackageDeps,  // Only send dependencies from current package.json
-            trackUpdate: trackIUpdateData.filter(update => update?.packageName && currentPackageDeps[update.packageName]),  // Filter update history
+            trackUpdate: trackIUpdateData.filter(update => update?.packageName && packageNames.includes(update.packageName)),  // Filter update history
             timestamp: currentTime,
             analytics: updateCounts,
             settings: settings  // Add settings to the data

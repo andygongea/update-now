@@ -81,6 +81,13 @@ export class CachedDataView implements vscode.Disposable {
     this._panel.webview.html = this._getHtmlForWebview(dependenciesData);
   }
 
+  private stripHtml(html: string | undefined) {
+    if (!html) {
+      return '';
+    }
+    return html.replace(/<[^>]*>/g, '');
+  }
+
   /**
    * Generates the HTML content for the webview
    * @param dependenciesData - The dependencies data to display
@@ -95,12 +102,10 @@ export class CachedDataView implements vscode.Disposable {
       
       return `
         <tr>
-          <td>${packageName}</td>
+          <td class="description">${packageName} <p>${this.stripHtml(description)}</p></td>
           <td>${version || 'N/A'}</td>
-          <td>${updateType || 'N/A'}</td>
           <td>${formattedDate}</td>
           <td>${author || 'N/A'}</td>
-          <td class="description">${description || 'N/A'}</td>
         </tr>
       `;
     }).join('');
@@ -117,10 +122,6 @@ export class CachedDataView implements vscode.Disposable {
             font-family: var(--vscode-font-family);
             padding: 10px;
             color: var(--vscode-editor-foreground);
-          }
-          h1 {
-            font-size: 1.5rem;
-            margin-bottom: 1rem;
           }
           .info {
             margin-bottom: 1rem;
@@ -147,9 +148,13 @@ export class CachedDataView implements vscode.Disposable {
           }
           .description {
             max-width: 300px;
+          }
+          .description p {
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+            opacity: .75;
+            margin: 5px 0 0;
           }
           .actions {
             margin-top: 1rem;
@@ -179,13 +184,10 @@ export class CachedDataView implements vscode.Disposable {
         </style>
       </head>
       <body>
-        <h1>Dependency Cache Data</h1>
         <div class="info">
           This view shows the raw data stored in the extension's state.
         </div>
-        <div class="actions">
-          <button id="refresh-btn">Refresh Data</button>
-        </div>
+        <button id="refresh-btn">Refresh Data</button>
         <div class="count">
           ${Object.keys(dependenciesData).length} dependencies cached
         </div>
@@ -196,10 +198,8 @@ export class CachedDataView implements vscode.Disposable {
                 <tr>
                   <th>Package Name</th>
                   <th>Latest Version</th>
-                  <th>Update Type</th>
                   <th>Last Updated</th>
                   <th>Author</th>
-                  <th>Description</th>
                 </tr>
               </thead>
               <tbody>
