@@ -32,10 +32,49 @@ async function wait(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+// Validates npm package names (scoped or unscoped)
+function isValidPackageName(name: string): boolean {
+  // NPM package name rules: https://docs.npmjs.com/cli/v10/configuring-npm/package-json#name
+  // - Length 1-214
+  // - Lowercase letters, digits, hyphens, underscores, dots
+  // - Scoped: @scope/name
+  // - Cannot start with dot or underscore, no spaces, no uppercase
+  // - No leading/trailing spaces
+  // - No consecutive dots
+  const npmNamePattern = /^(?:@[a-z0-9-_]+\/)?[a-z0-9][a-z0-9-._]{0,213}$/;
+  if (!name || typeof name !== 'string') {
+    return false;
+  }
+  if (name.length > 214 || name.length < 1) {
+    return false;
+  }
+  if (name.startsWith('.') || name.startsWith('_')) {
+    return false;
+  }
+  if (/\s/.test(name)) {
+    return false;
+  }
+  if (/[A-Z]/.test(name)) {
+    return false;
+  }
+  if (/\.\./.test(name)) {
+    return false;
+  }
+  if (!npmNamePattern.test(name)) {
+    return false;
+  }
+  return true;
+}
+
 export async function getLatestVersion(packageName: string): Promise<ICachedData | null> {
   const startTime = Date.now();
   
   try {
+    // Validate and sanitize packageName
+    if (!isValidPackageName(packageName)) {
+      // Optionally, log or handle invalid package name here
+      return null;
+    }
     if (!canMakeRequest()) {
       // Wait for the batch delay before proceeding
       await wait(BATCH_DELAY);
