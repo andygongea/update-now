@@ -279,30 +279,15 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
         // Determine if a package is open by checking if we have any dependencies in currentPackageDeps
         const isPackageOpen = Object.keys(currentPackageDeps).length > 0;
 
-                // Make sure our browser view has styles for section badges
-                const css = `
-                .section-badge {
-                    display: inline-block;
-                    font-size: 0.7rem;
-                    padding: 0.1rem 0.3rem;
-                    margin-left: 0.5rem;
-                    border-radius: 3px;
-                    background-color: #555;
-                    color: white;
-                }
-                .section-badge.dev {
-                    background-color: #2a6a99;
-                }
-                `;
-                
-                // Add the CSS to the data to inject it into the webview
-                data.customCss = css;
-                
-                webview.postMessage({
-                    type: 'update',
-                    data,
-                    isPackageOpen // Include flag to indicate if a package.json is open with dependencies
-                });
+        // The section-badge styles are now served from the static CSS file
+        // We'll set customCss to empty since we don't need dynamic CSS injection
+        data.customCss = '';
+        
+        webview.postMessage({
+            type: 'update',
+            data,
+            isPackageOpen // Include flag to indicate if a package.json is open with dependencies
+        });
     }
 
     /**
@@ -548,11 +533,39 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                     const upToDate = document.getElementById('up-to-date');
                     const historicUpdates = document.getElementById('historic-updates');
                     
-                    // Add custom CSS if provided
-                    if (data.customCss) {
-                        const styleElement = document.createElement('style');
+                    // Add custom CSS if provided and not empty
+                    if (data.customCss && data.customCss.trim() !== '') {
+                        // Use an ID to prevent duplicate style elements
+                        let styleElement = document.getElementById('update-now-custom-styles');
+                        if (!styleElement) {
+                            styleElement = document.createElement('style');
+                            styleElement.id = 'update-now-custom-styles';
+                            document.head.appendChild(styleElement);
+                        }
                         styleElement.textContent = data.customCss;
-                        document.head.appendChild(styleElement);
+                    }
+                    
+                    // Make sure the section badge classes are defined
+                    let badgeStyles = document.getElementById('section-badge-styles');
+                    if (!badgeStyles) {
+                        badgeStyles = document.createElement('style');
+                        badgeStyles.id = 'section-badge-styles';
+                        // Add the CSS for section badges directly
+                        badgeStyles.textContent = 
+                            '.section-badge {' +
+                            '    display: inline-block;' + 
+                            '    font-size: 1rem;' +
+                            '    padding: 1px 5px 2px;' +
+                            '    margin-left: 0.5rem;' +
+                            '    border-radius: 10px;' +
+                            '    line-height: 1;' +
+                            '    background-color: #555;' +
+                            '    color: white;' +
+                            '}' +
+                            '.section-badge.dev {' +
+                            '    background-color: #2a6a99;' +
+                            '}';
+                        document.head.appendChild(badgeStyles);
                     }
                     
                     if (timestamp) {
@@ -617,7 +630,7 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                                     };
                                     // Add section indicator to differentiate between dependencies & devDependencies
                                     const sectionBadge = info.section === 'devDependencies' ? 
-                                        '<span class="section-badge dev">dev</span>' : '';
+                                        '<span class="section-badge dev">DEV</span>' : '';
                                     
                                     div.innerHTML = 
                                         '<p>' +

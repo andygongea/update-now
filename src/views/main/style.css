@@ -57,6 +57,9 @@ p { margin: 0; line-height: 1.45; word-break: break-word; }
 
 .upn-cache-age { display:none; }
 
+.section-badge { display: inline-block; font-size: 1rem; padding: 2px 5px 3px; margin-left: 0.5rem; border-radius: 10px; background-color: #555; color: white; }
+.section-badge.dev { background-color: #2a6a99; }
+
 /* Switch styles */
 .switch { position: relative; display: inline-block; width: 50px; height: 20px; flex-shrink: 0; }
 .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; border: 1px solid ar(--vscode-input-background); transition: .2s; border-radius: 20px; border: 1px solid var(--vscode-panel-border); }
