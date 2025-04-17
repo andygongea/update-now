@@ -45,7 +45,7 @@ export abstract class BaseEnvironment implements IEnvironment {
         continue;
       }
       
-      // Update the dependency
+      // Update the dependency and increment count if successful
       const success = await this.updateDependency(
         document, 
         dep.name, 

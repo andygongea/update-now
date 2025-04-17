@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
-import { IWebviewMessage, IUpdateData } from './types';
+import { IWebviewMessage, IUpdateData, IViewDependencyData } from './types';
 import { getCacheViewTemplate } from './template';
 import { getUpdateType } from '../../utils/getUpdateType';
-import { IDependencyData, UpdateType, VersionInfo } from '../../utils/types';
+import { IDependencyData, UpdateType } from '../../environments/base/types';
+import { EnvironmentRegistry } from '../../environments/EnvironmentRegistry';
 import { getPosition } from '../../utils/getPosition';
 
 function getNonce() {
@@ -149,7 +150,23 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
      * @param webview - The webview to update
      */
     private async _updateContent(webview: vscode.Webview) {
-        const dependenciesData = this._context.workspaceState.get<Record<string, IDependencyData>>('dependenciesData', {});
+        // Get dependency data from all environments
+        const allDependenciesData: Record<string, IDependencyData> = {};
+        const environments = EnvironmentRegistry.getAllEnvironments();
+        
+        // Collect data from all environments
+        for (const env of environments) {
+            const envData = env.getStoredDependenciesData(this._context);
+            // Merge into the flat structure for the UI
+            Object.entries(envData).forEach(([packageName, data]) => {
+                allDependenciesData[packageName] = {
+                    ...data,
+                    // Store the environment ID in our local structure
+                    // but don't modify the original IDependencyData type
+                };
+            });
+        }
+        
         const trackIUpdateData = this._context.workspaceState.get<any[]>('trackUpdate', []);
         const currentTime = new Date().toISOString();
 
@@ -162,56 +179,73 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
         };
 
         // Get current package.json content if any is open
-        let currentPackageDeps: Record<string, IDependencyData> = {};
+        let currentPackageDeps: Record<string, IViewDependencyData> = {};
         const activeEditor = vscode.window.activeTextEditor;
-        if (activeEditor && activeEditor.document.fileName.endsWith('package.json')) {
-            try {
-                const packageJson = JSON.parse(activeEditor.document.getText());
-                // Process dependencies
-                if (packageJson.dependencies) {
-                    for (const [name, version] of Object.entries(packageJson.dependencies)) {
-                        if (dependenciesData[name]) {
-                            const updateTypeResult = getUpdateType(version as string, dependenciesData[name].version as string);
-                            if (updateTypeResult === 'major' || updateTypeResult === 'minor' ||
-                                updateTypeResult === 'patch' || updateTypeResult === 'latest') {
-                                currentPackageDeps[name + '@' + version] = {
-                                    ...dependenciesData[name],
-                                    updateType: UpdateType[updateTypeResult]
-                                };
+        
+        if (activeEditor) {
+            // Find environment for the current document
+            const env = EnvironmentRegistry.getEnvironmentForDocument(activeEditor.document);
+            if (env && env.id === 'npm' && activeEditor.document.fileName.endsWith('package.json')) {
+                try {
+                    const packageJson = JSON.parse(activeEditor.document.getText());
+                    
+                    // Process dependencies
+                    if (packageJson.dependencies) {
+                        for (const [name, version] of Object.entries(packageJson.dependencies)) {
+                            if (allDependenciesData[name]) {
+                                const updateTypeResult = getUpdateType(version as string, allDependenciesData[name].version as string);
+                                if (updateTypeResult === 'major' || updateTypeResult === 'minor' ||
+                                    updateTypeResult === 'patch' || updateTypeResult === 'latest') {
+                                    // Use section as part of the key to properly handle duplicates
+                                    const depKey = `dependencies:${name}@${version}`;
+                                    currentPackageDeps[depKey] = {
+                                        ...allDependenciesData[name],
+                                        name, // Add name explicitly for display
+                                        section: 'dependencies',
+                                        currentVersion: version as string,
+                                        updateType: updateTypeResult as UpdateType
+                                    };
+                                }
                             }
                         }
                     }
-                }
-
-                // Process devDependencies
-                if (packageJson.devDependencies) {
-                    for (const [name, version] of Object.entries(packageJson.devDependencies)) {
-                        if (dependenciesData[name]) {
-                            const updateTypeResult = getUpdateType(version as string, dependenciesData[name].version as string);
-                            if (updateTypeResult === 'major' || updateTypeResult === 'minor' ||
-                                updateTypeResult === 'patch' || updateTypeResult === 'latest') {
-                                currentPackageDeps[name + '@' + version] = {
-                                    ...dependenciesData[name],
-                                    updateType: UpdateType[updateTypeResult]
-                                };
+                    
+                    // Process devDependencies
+                    if (packageJson.devDependencies) {
+                        for (const [name, version] of Object.entries(packageJson.devDependencies)) {
+                            if (allDependenciesData[name]) {
+                                const updateTypeResult = getUpdateType(version as string, allDependenciesData[name].version as string);
+                                if (updateTypeResult === 'major' || updateTypeResult === 'minor' ||
+                                    updateTypeResult === 'patch' || updateTypeResult === 'latest') {
+                                    // Use section as part of the key to properly handle duplicates
+                                    const depKey = `devDependencies:${name}@${version}`;
+                                    currentPackageDeps[depKey] = {
+                                        ...allDependenciesData[name],
+                                        name, // Add name explicitly for display
+                                        section: 'devDependencies',
+                                        currentVersion: version as string,
+                                        updateType: updateTypeResult as UpdateType
+                                    };
+                                }
                             }
                         }
                     }
+                } catch (error) {
+                    console.error('Error parsing package.json:', error);
                 }
-            } catch (error) {
-                console.error('Error parsing package.json:', error);
             }
         }
 
         // Count updates by type only for current package
-        const updateCounts: Record<UpdateType, number> = {
-            [UpdateType.patch]: 0,
-            [UpdateType.minor]: 0,
-            [UpdateType.major]: 0,
-            [UpdateType.latest]: 0,
-            [UpdateType.invalid]: 0,
-            [UpdateType.invalidLatest]: 0,
-            [UpdateType.url]: 0
+        const updateCounts: Record<string, number> = {
+            'patch': 0,
+            'minor': 0,
+            'major': 0,
+            'latest': 0,
+            'invalid': 0,
+            // Add these for backward compatibility with the UI
+            'invalidLatest': 0, 
+            'url': 0
         };
 
         // Only count updates for the current package's dependencies
@@ -245,18 +279,37 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
         // Determine if a package is open by checking if we have any dependencies in currentPackageDeps
         const isPackageOpen = Object.keys(currentPackageDeps).length > 0;
 
-        webview.postMessage({
-            type: 'update',
-            data,
-            isPackageOpen // Include flag to indicate if a package.json is open with dependencies
-        });
+                // Make sure our browser view has styles for section badges
+                const css = `
+                .section-badge {
+                    display: inline-block;
+                    font-size: 0.7rem;
+                    padding: 0.1rem 0.3rem;
+                    margin-left: 0.5rem;
+                    border-radius: 3px;
+                    background-color: #555;
+                    color: white;
+                }
+                .section-badge.dev {
+                    background-color: #2a6a99;
+                }
+                `;
+                
+                // Add the CSS to the data to inject it into the webview
+                data.customCss = css;
+                
+                webview.postMessage({
+                    type: 'update',
+                    data,
+                    isPackageOpen // Include flag to indicate if a package.json is open with dependencies
+                });
     }
 
     /**
      * Navigate to the line where a package is defined in package.json
      * @param packageName - Name of the package to navigate to
      */
-    private async _navigateToPackage(packageName: string) {
+    private async _navigateToPackage(packageName: string, section?: string) {
         const activeEditor = vscode.window.activeTextEditor;
         if (!activeEditor || !activeEditor.document.fileName.endsWith('package.json')) {
             return;
@@ -282,12 +335,18 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
             let targetPosition = positions[0]; // Default to first position
 
             if (targetVersion && positions.length > 1) {
-                // Check each position to find the one with matching version
+                // Check each position to find the one with matching version and section
                 for (const pos of positions) {
                     const line = activeEditor.document.lineAt(pos.line).text;
                     const version = line.match(/":\s*"([^"]+)"/)?.[1]; // Extract version from the line
-
-                    if (version === targetVersion) {
+                    
+                    // Also check if this position is in the right section (dependencies or devDependencies)
+                    // Check if the line is in devDependencies by looking at lines above it
+                    const isInDevSection = this.checkIfInDevDependencies(activeEditor.document, pos.line);
+                    const posSection = isInDevSection ? 'devDependencies' : 'dependencies';
+                    
+                    // Match both version and section if provided
+                    if (version === targetVersion && (!section || section === posSection)) {
                         targetPosition = pos;
                         break;
                     }
@@ -317,30 +376,49 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
     }
 
     private async _clearCache() {
-        await this._context.workspaceState.update('dependenciesData', {});
-        await this._context.workspaceState.update('trackUpdate', []);
-
-        // Find and refresh all package.json files
-        const packageJsonFiles = await vscode.workspace.findFiles('**/package.json', '**/node_modules/**');
-        if (packageJsonFiles.length > 0) {
-            const document = await vscode.workspace.openTextDocument(packageJsonFiles[0]);
-            // This will trigger a refresh of the CodeLens
-            this._context.workspaceState.update('dependenciesData', {});
-            document.save();
-
-            // Focus on the package.json file
-            const editor = await vscode.window.showTextDocument(document, {
-                preview: false,
-                preserveFocus: false
-            });
+        // Clear cache for all environments
+        const environments = EnvironmentRegistry.getAllEnvironments();
+        for (const env of environments) {
+            const key = `dependenciesData.${env.id}`;
+            this._context.workspaceState.update(key, {});
         }
-
+        vscode.window.showInformationMessage('Cache cleared successfully!');
         this.refresh();
-        vscode.window.showInformationMessage('Dependencies cache cleared successfully');
     }
 
     private _getMediaUrl(fileName: string): vscode.Uri {
         return this._webview!.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'out', 'views', fileName));
+    }
+
+    /**
+     * Helper method to determine if a line is in the devDependencies section
+     */
+    private checkIfInDevDependencies(document: vscode.TextDocument, lineNumber: number): boolean {
+        const text = document.getText();
+        const lines = text.split("\n");
+        
+        // Go backward from the current line to find section identifier
+        for (let i = lineNumber; i >= 0; i--) {
+            const line = lines[i].trim();
+            
+            // Found devDependencies section
+            if (line.includes('"devDependencies"')) {
+                return true;
+            }
+            
+            // Found dependencies section
+            if (line.includes('"dependencies"')) {
+                return false;
+            }
+            
+            // If we hit the end of a section, stop searching
+            if (line === '}' && (i > 0 && lines[i - 1].includes('}'))) {
+                return false;
+            }
+        }
+        
+        // Default to regular dependencies if we can't determine
+        return false;
     }
 
     private _getHtmlForWebview(webview: vscode.Webview) {
@@ -470,6 +548,13 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                     const upToDate = document.getElementById('up-to-date');
                     const historicUpdates = document.getElementById('historic-updates');
                     
+                    // Add custom CSS if provided
+                    if (data.customCss) {
+                        const styleElement = document.createElement('style');
+                        styleElement.textContent = data.customCss;
+                        document.head.appendChild(styleElement);
+                    }
+                    
                     if (timestamp) {
                         timestamp.textContent = 'Last updated: ' + formatRelativeTime(data.timestamp);
                     }
@@ -526,14 +611,19 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                                     div.onclick = () => {
                                         vscode.postMessage({ 
                                             command: 'navigateToPackage',
-                                            packageName: info.name 
+                                            packageName: info.name,
+                                            section: info.section
                                         });
                                     };
+                                    // Add section indicator to differentiate between dependencies & devDependencies
+                                    const sectionBadge = info.section === 'devDependencies' ? 
+                                        '<span class="section-badge dev">dev</span>' : '';
+                                    
                                     div.innerHTML = 
                                         '<p>' +
-                                        '<strong>📦 ' + info.name + '</strong> ' +
+                                        '<strong>📦 ' + info.name + '</strong> ' + sectionBadge + ' ' +
                                         '<span class="dimmed">⇢</span> ' +
-                                        '<strong>' + info.version + '</strong>' +
+                                        '<strong>' + (info.currentVersion || info.version) + '</strong>' +
                                         '</p>' +
                                         '<p class="dimmed">' + stripHtml(info.description || '') + '</p>';
                                     groupDiv.appendChild(div);
