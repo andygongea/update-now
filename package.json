@@ -38,6 +38,21 @@
     "configuration": {
       "title": "Update Now",
       "properties": {
+        "update-now.environments": {
+          "type": "array",
+          "default": [
+            {
+              "id": "npm",
+              "name": "NPM",
+              "enabled": true,
+              "filePatterns": ["**/package.json"],
+              "excludePatterns": ["**/node_modules/**"],
+              "priority": 10
+            }
+          ],
+          "description": "Configuration for dependency environments",
+          "scope": "window"
+        },
         "update-now.codeLens.patch": {
           "type": "boolean",
           "default": true,
