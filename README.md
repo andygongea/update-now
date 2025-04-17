@@ -35,7 +35,6 @@ With just one click in your `package.json`, you can view and apply updates while
 1. 🚀 **Effortless Updates**
    - See available updates directly in your code
    - Apply updates with a single click
-   - No more CLI commands needed
 
 2. 📈 **Smart Insights**
    - Track update history

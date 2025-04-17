@@ -4,6 +4,26 @@ All notable changes to the "update-now" extension will be documented in this fil
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [1.1.0] - 2025-01-10
+
+### Added
+
+ - Introduced new page for visualizing the stored dependencies
+ - NavToPackage is now available to the Latest tab as well
+ - Empty state for when the package.json file tab is not focused on
+ - Bulk update for the visible code lenses
+ - Package name sanitization
+
+### Fixed
+ 
+ - Text colors for the heading sections in Cache View
+
+### Changed
+ 
+ - Improved copy for a simpler user experience
+ - Reduced the time allocated to fetch the latest version from 35 to 25 seconds
+
+
 ## [1.0.1] - 2025-01-10
 
 ### Fixed

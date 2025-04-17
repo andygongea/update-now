@@ -102,10 +102,13 @@ export class CachedDataView implements vscode.Disposable {
       
       return `
         <tr>
-          <td class="description">${packageName} <p>${this.stripHtml(description)}</p></td>
+          <td class="description">
+            <strong>${packageName}</strong>
+            <p>${this.stripHtml(description)}</p>
+          </td>
           <td>${version || 'N/A'}</td>
-          <td>${formattedDate}</td>
           <td>${author || 'N/A'}</td>
+          <td>${formattedDate}</td>
         </tr>
       `;
     }).join('');
@@ -198,8 +201,8 @@ export class CachedDataView implements vscode.Disposable {
                 <tr>
                   <th>Package Name</th>
                   <th>Latest Version</th>
-                  <th>Last Updated</th>
                   <th>Author</th>
+                  <th>Last Updated</th>
                 </tr>
               </thead>
               <tbody>
