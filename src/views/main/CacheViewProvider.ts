@@ -217,7 +217,20 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
         // Only count updates for the current package's dependencies
         if (Array.isArray(trackIUpdateData)) {
             // Extract just the package names from currentPackageDeps keys (removing @version)
-            const packageNames = Object.keys(currentPackageDeps).map(key => key.split('@')[0]);
+            // Handle scoped packages correctly (those starting with @)
+            const packageNames = Object.keys(currentPackageDeps).map(key => {
+                // If it's a scoped package (starts with @), we need special handling
+                if (key.startsWith('@')) {
+                    // Format is @scope/name@version - extract @scope/name
+                    const scopeParts = key.split('@');
+                    // For @scope/name@version, we want @scope/name
+                    if (scopeParts.length >= 3) {
+                        return '@' + scopeParts[1];
+                    }
+                }
+                // For regular packages, just split at the version separator
+                return key.split('@')[0];
+            });
 
             trackIUpdateData
                 .filter(update => update?.packageName && packageNames.includes(update.packageName))
@@ -232,7 +245,20 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
         }
 
         // Extract package names for filtering
-        const packageNames = Object.keys(currentPackageDeps).map(key => key.split('@')[0]);
+        // Handle scoped packages correctly (those starting with @)
+        const packageNames = Object.keys(currentPackageDeps).map(key => {
+            // If it's a scoped package (starts with @), we need special handling
+            if (key.startsWith('@')) {
+                // Format is @scope/name@version - extract @scope/name
+                const scopeParts = key.split('@');
+                // For @scope/name@version, we want @scope/name
+                if (scopeParts.length >= 3) {
+                    return '@' + scopeParts[1];
+                }
+            }
+            // For regular packages, just split at the version separator
+            return key.split('@')[0];
+        });
 
         const data: IUpdateData = {
             dependencies: currentPackageDeps,  // Only send dependencies from current package.json

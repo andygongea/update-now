@@ -26,7 +26,7 @@ p { margin: 0; line-height: 1.45; word-break: break-word; }
 .dependency-item:first-of-type { border-radius: 4px 4px 0 0; }
 .dependency-item:last-of-type { border-radius: 0 0 4px 4px; margin-bottom: 16px; }
 .dependency-item strong { font-weight: 600; }
-.upn-to-update .dependency-item:hover { background-color: var(--vscode-editor-background); cursor: pointer; }
+.dependency-item:hover { background-color: var(--vscode-editor-background); cursor: pointer; }
 
 .group-title,.settings-title { position: relative; font-size: 1.4rem; font-weight: 600; margin: 0 0 4px 0; padding: 8px 0; border-radius: 4px; }
 .settings-title::after { position: absolute; content: ""; top: 19px; right: 0; left: 0; height: 1px; background-image: linear-gradient(90deg, transparent 120px, var(--vscode-panel-border));}
