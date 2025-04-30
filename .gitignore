@@ -6,3 +6,6 @@ out/
 
 # Package lock
 package-lock.json
+
+# VSIX
+*.vsix
