@@ -29,8 +29,8 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
   private currentBatchPromises: Promise<any>[] = [];
   private document: vscode.TextDocument | null = null;
 
-  private updateStatusBar(message: string, isProcessing: boolean = false) {
-    updateStatusBar(message, isProcessing);
+  private updateStatusBar(message: string, isProcessing: boolean = false, cachedDependenciesCount?: number) {
+    updateStatusBar(message, isProcessing, cachedDependenciesCount);
   }
 
   constructor(private context: vscode.ExtensionContext) { }
@@ -95,11 +95,12 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
     }
 
     // Update status bar with results
+    const cachedDependenciesCount = Object.keys(this.dependenciesData).length;
     const outdatedCount = Object.values(this.dependenciesData).filter(dep => dep.updateType !== "latest").length;
     if (outdatedCount > 0) {
-      this.updateStatusBar(`📦 ${outdatedCount} total updates available`);
+      this.updateStatusBar(`${outdatedCount} outdated dependencies`, false, cachedDependenciesCount);
     } else {
-      this.updateStatusBar(`✅ All up to date`);
+      this.updateStatusBar('All dependencies up to date', false, cachedDependenciesCount);
     }
 
     this.isProcessing = false;

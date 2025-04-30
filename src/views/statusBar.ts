@@ -21,8 +21,9 @@ export function initializeStatusBar(context: vscode.ExtensionContext): vscode.St
  * Update the status bar with a message
  * @param message The message to display
  * @param isProcessing Whether to show a processing indicator
+ * @param cachedDependenciesCount Optional number of cached dependencies to display
  */
-export function updateStatusBar(message: string, isProcessing: boolean = false): void {
+export function updateStatusBar(message: string, isProcessing: boolean = false, cachedDependenciesCount?: number): void {
   if (!statusBarItem) {
     return;
   }
@@ -32,7 +33,11 @@ export function updateStatusBar(message: string, isProcessing: boolean = false):
     statusBarItem.tooltip = "🔃 Fetching dependencies' latest versions.";
     statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
   } else {
-    statusBarItem.text = `⇪ Update Now: ${message}`;
+    let statusText = `⇪ Update Now:`;
+    if (cachedDependenciesCount !== undefined) {
+      statusText += `📦 ${cachedDependenciesCount} cached dependencies`;
+    }
+    statusBarItem.text = statusText;
     statusBarItem.tooltip = "Updates across your scanned package.json files.";
     statusBarItem.backgroundColor = undefined; // Reset to default
   }
