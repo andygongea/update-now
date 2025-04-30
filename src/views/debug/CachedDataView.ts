@@ -131,6 +131,7 @@ export class CachedDataView implements vscode.Disposable {
             color: var(--vscode-descriptionForeground);
           }
           table {
+            background-color: var(--vscode-editor-background);
             width: 100%;
             border-collapse: collapse;
             margin-top: 1rem;
@@ -141,10 +142,11 @@ export class CachedDataView implements vscode.Disposable {
             border-bottom: 1px solid var(--vscode-panel-border);
           }
           th {
-            position: sticky;
-            top: 0;
-            background-color: var(--vscode-editor-background);
+            z-index:10; position: sticky; top: 0;
+            background-color: var(--vscode-editor-background); 
             font-weight: bold;
+            border-bottom: 2px dashed var(--vscode-panel-border);
+            padding: 1rem 0.5rem;
           }
           tr:hover {
             background-color: var(--vscode-list-hoverBackground);
@@ -189,8 +191,9 @@ export class CachedDataView implements vscode.Disposable {
       <body>
         <div class="info">
           This view shows the raw data stored in the extension's state.
+          <button id="refresh-btn">Refresh Data</button>
         </div>
-        <button id="refresh-btn">Refresh Data</button>
+        
         <div class="count">
           ${Object.keys(dependenciesData).length} dependencies cached
         </div>
