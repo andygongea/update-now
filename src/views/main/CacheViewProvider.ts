@@ -214,6 +214,9 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
             [UpdateType.url]: 0
         };
 
+        // Get the current package.json file path
+        const currentFilePath = activeEditor?.document.uri.fsPath || '';
+
         // Only count updates for the current package's dependencies
         if (Array.isArray(trackIUpdateData)) {
             // Extract just the package names from currentPackageDeps keys (removing @version)
@@ -233,7 +236,12 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
             });
 
             trackIUpdateData
-                .filter(update => update?.packageName && packageNames.includes(update.packageName))
+                .filter(update => {
+                    // Only include updates for the current package.json file and current package names
+                    return update?.packageName && 
+                           packageNames.includes(update.packageName) && 
+                           update?.filePath === currentFilePath;
+                })
                 .forEach((update: any) => {
                     if (update?.updateType) {
                         const updateType = update.updateType.toLowerCase() as UpdateType;
@@ -262,7 +270,11 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
 
         const data: IUpdateData = {
             dependencies: currentPackageDeps,  // Only send dependencies from current package.json
-            trackUpdate: trackIUpdateData.filter(update => update?.packageName && packageNames.includes(update.packageName)),  // Filter update history
+            trackUpdate: trackIUpdateData.filter(update => 
+                update?.packageName && 
+                packageNames.includes(update.packageName) && 
+                update?.filePath === currentFilePath
+            ),  // Filter update history by package name and file path
             timestamp: currentTime,
             analytics: updateCounts,
             settings: settings  // Add settings to the data

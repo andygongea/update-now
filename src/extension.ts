@@ -508,7 +508,7 @@ async function updateDependency(this: any, context: vscode.ExtensionContext, doc
     existingData = existingData ? [existingData] : [];
   }
 
-  // Add new update to the array
+  // Add new update to the array with file path
   await context.workspaceState.update('trackUpdate', [
     ...existingData,
     {
@@ -516,7 +516,8 @@ async function updateDependency(this: any, context: vscode.ExtensionContext, doc
       currentVersion,
       latestVersion,
       updateType: getUpdateType(currentVersion, latestVersion),
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      filePath: documentUri.fsPath // Store the file path to identify which package.json this update belongs to
     }
   ]);
 
@@ -602,6 +603,7 @@ async function updateAllDependencies(context: vscode.ExtensionContext, documentU
           if (!dependenciesToUpdate.includes(packageName)) {
             dependenciesToUpdate.push(packageName);
           }
+          // Pass the document URI to ensure file path is stored with the update
           await updateDependency(context, documentUri, packageName, latestVersionData.version, sectionType, false);
         } else {
           logger.info(`Skipping ${packageName} - update type ${updateType} is disabled in settings`);
