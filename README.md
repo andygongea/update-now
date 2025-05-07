@@ -38,8 +38,8 @@ With just one click in your `package.json`, you can view and apply updates while
 
 2. 📈 **Smart Insights**
    - Track update history
-   - Monitor dependency health
    - Make informed update decisions
+   - 🆕 Check updates for peer, dev and optional dependencies 
 
 3. ⚡ **Maximum Productivity**
    - Save time with batch updates

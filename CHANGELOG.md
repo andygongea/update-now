@@ -4,7 +4,19 @@ All notable changes to the "update-now" extension will be documented in this fil
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
-## [1.1.0] - 2025-01-10
+## [1.2.0] - 2025-05-07
+
+### Added
+
+ - Detection of: peer, dev, optional dependencies
+ - Badge to show these different types of dependencies sections
+
+### Fixed
+ 
+ - Bug that prevented the Code Lens to appear in the package.json file
+
+
+## [1.1.0] - 2025-04-30
 
 ### Added
 
