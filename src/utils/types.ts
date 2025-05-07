@@ -19,6 +19,7 @@ export interface IPackagePosition {
   line: number;
   character: number;
   inDependencies: boolean;
+  sectionType?: string; // The specific type of dependency section (dependencies, devDependencies, etc.)
 }
 
 export interface IDependencyData {

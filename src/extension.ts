@@ -133,10 +133,17 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
 
     try {
       const packageJson = JSON.parse(document.getText());
+      // Include all dependency types in allDependencies
       const allDependencies = {
         ...packageJson.dependencies || {},
-        ...packageJson.devDependencies || {}
+        ...packageJson.devDependencies || {},
+        ...packageJson.peerDependencies || {},
+        ...packageJson.optionalDependencies || {},
+        ...packageJson.bundleDependencies || {},
+        ...packageJson.bundledDependencies || {}
       };
+      
+      logger.debug(`Found dependencies across all sections: ${Object.keys(allDependencies).length}`);
 
       const storedDependencies = this.context.workspaceState.get<Record<string, IDependencyData>>('dependenciesData', {});
       this.dependenciesData = Object.keys(storedDependencies).length !== 0 ? storedDependencies : {};
@@ -218,9 +225,17 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
 
       // Create a CodeLens for each position where the package appears
       for (const position of validPositions) {
-        // Determine if this position is in dependencies or devDependencies
-        const isDev = this.isInDevDependencies(document, position.line);
-        const sectionType = isDev ? 'devDependencies' : 'dependencies';
+        // Use the section type provided by position detection if available, otherwise determine it
+        let sectionType = position.sectionType;
+        
+        // Fall back to the section detection method if position doesn't have a section type
+        if (!sectionType) {
+          sectionType = this.getDependencySectionType(document, position.line) || 'dependencies';
+        }
+        
+        logger.info(`Processing ${packageName} in section type: ${sectionType}`);
+        
+        // sectionType is already determined by getDependencySectionType
         const currentVersion = packageJson[sectionType]?.[packageName];
 
         if (!currentVersion) {
@@ -386,45 +401,88 @@ class DependencyCodeLensProvider implements vscode.CodeLensProvider {
     );
   }
 
-  // Helper method to determine if a line is in the devDependencies section
-  private isInDevDependencies(document: vscode.TextDocument, lineNumber: number): boolean {
+  /**
+   * Determines which dependency section type a line belongs to
+   * @param document The text document containing the package.json
+   * @param lineNumber The line number to check
+   * @returns The section type (dependencies, devDependencies, etc.) or null if not in a dependency section
+   */
+  private getDependencySectionType(document: vscode.TextDocument, lineNumber: number): string | null {
     const text = document.getText();
     const lines = text.split("\n");
-
+    
+    let braceCount = 0;
+    let inSection = false;
+    let currentSection = '';
+    
+    // Dependency section types to check for - include all known variations
+    const dependencySections = [
+      'dependencies',
+      'devDependencies',
+      'peerDependencies',
+      'bundleDependencies',   // NPM uses this form now
+      'bundledDependencies',  // This form was used in older versions
+      'optionalDependencies'
+    ];
+    
     // Go backward from the current line to find section identifier
     for (let i = lineNumber; i >= 0; i--) {
       const line = lines[i].trim();
-
-      // Found devDependencies section
-      if (line.includes('"devDependencies"')) {
-        return true;
+      
+      // Count closing braces we encounter going backward
+      if (line.includes('}')) {
+        const closingBraces = line.split('}').length - 1;
+        braceCount += closingBraces;
       }
-
-      // Found dependencies section
-      if (line.includes('"dependencies"')) {
-        return false;
+      
+      if (line.includes('{')) {
+        const openingBraces = line.split('{').length - 1;
+        braceCount -= openingBraces;
+        
+        // If braces are balanced, we've exited a section
+        if (braceCount === 0 && inSection) {
+          inSection = false;
+          currentSection = '';
+        }
       }
-
-      // If we hit the end of a section, stop searching
-      if (line === '}' && (i > 0 && lines[i - 1].includes('}'))) {
-        return false;
+      
+      // Check for any dependency section
+      for (const section of dependencySections) {
+        if (line.includes(`"${section}"`)) {
+          if (!inSection && braceCount > 0) {
+            inSection = true;
+            currentSection = section;
+            return section;
+          }
+        }
       }
     }
+    
+    // Not in any dependency section
+    return null;
+  }
 
-    // Default to regular dependencies if we can't determine
-    return false;
+  /**
+   * Helper method to determine if a line is in the devDependencies section
+   * @param document The text document containing the package.json
+   * @param lineNumber The line number to check
+   * @returns true if the line is in the devDependencies section, false otherwise
+   */
+  private isInDevDependencies(document: vscode.TextDocument, lineNumber: number): boolean {
+    const sectionType = this.getDependencySectionType(document, lineNumber);
+    return sectionType === 'devDependencies';
   }
 
   refreshCodeLenses = debounce(async (document: vscode.TextDocument) => {
-    // Just trigger the CodeLens refresh without clearing cache
-    this._onDidChangeCodeLenses.fire();
+  // Just trigger the CodeLens refresh without clearing cache
+  this._onDidChangeCodeLenses.fire();
 
-    // Reset only the promises array for new checks
-    this.promises = [];
+  // Reset only the promises array for new checks
+  this.promises = [];
 
-    // Let provideCodeLenses handle cache validation
-    await this.provideCodeLenses(document);
-  }, 50);
+  // Let provideCodeLenses handle cache validation
+  await this.provideCodeLenses(document);
+}, 50);
 }
 
 async function updateDependency(this: any, context: vscode.ExtensionContext, documentUri: vscode.Uri, packageName: string, latestVersion: string, sectionType: string = 'dependencies', showNotification: boolean = true): Promise<void> {
@@ -432,19 +490,35 @@ async function updateDependency(this: any, context: vscode.ExtensionContext, doc
   const text = document.getText();
   const packageJson = JSON.parse(text);
 
+  // Define all supported dependency section types
+  const allDependencyTypes = [
+    'dependencies',
+    'devDependencies',
+    'peerDependencies',
+    'bundleDependencies',
+    'bundledDependencies',  // Support both naming conventions
+    'optionalDependencies'
+  ];
+  
   // Use the specified section type or fall back to finding it
   let currentVersion: string | undefined;
-  if (sectionType === 'devDependencies') {
-    currentVersion = packageJson.devDependencies?.[packageName];
-  } else if (sectionType === 'dependencies') {
-    currentVersion = packageJson.dependencies?.[packageName];
+  
+  if (allDependencyTypes.includes(sectionType)) {
+    // Get the current version from the specified section
+    currentVersion = packageJson[sectionType]?.[packageName];
+    logger.info(`Finding package ${packageName} in specified section ${sectionType}: ${currentVersion || 'not found'}`);
   } else {
-    // Fallback to either section if not specified
-    currentVersion = packageJson.dependencies?.[packageName] || packageJson.devDependencies?.[packageName];
-
-    // Determine which section contains this package
-    if (currentVersion) {
-      sectionType = packageJson.dependencies?.[packageName] ? 'dependencies' : 'devDependencies';
+    // Fallback: Try to find in any dependency section if not specified or not found
+    logger.info(`Section type ${sectionType} not specified or invalid, checking all sections...`);
+    
+    // Try each section type until we find the package
+    for (const section of allDependencyTypes) {
+      if (packageJson[section]?.[packageName]) {
+        currentVersion = packageJson[section][packageName];
+        sectionType = section;
+        logger.info(`Found package ${packageName} in ${section}: ${currentVersion}`);
+        break;
+      }
     }
   }
 
@@ -453,36 +527,61 @@ async function updateDependency(this: any, context: vscode.ExtensionContext, doc
     return;
   }
 
-  // Clean versions for comparison
-  const cleanCurrentVersion = currentVersion.replace(/^[~^]/, "");
-  const cleanLatestVersion = latestVersion.replace(/^[~^]/, "");
-
-  if (!cleanLatestVersion) {
-    vscode.window.showErrorMessage(`Invalid version format: ${latestVersion}`);
-    return;
-  }
-
-  // Compare clean versions
-  const isMajorUpdate = semver.diff(cleanLatestVersion, cleanCurrentVersion) === "major";
-  const versionPrefix = getVersionPrefix(currentVersion);
-
-  // Only apply prefix if it's not a major update and we had a prefix before
-  let updatedVersion = cleanLatestVersion;
-  if (!isMajorUpdate && versionPrefix) {
-    // Validate the version with prefix is valid
-    const prefixedVersion = versionPrefix + cleanLatestVersion;
-    if (!semver.validRange(prefixedVersion)) {
-      vscode.window.showErrorMessage(`Invalid version format after applying prefix: ${prefixedVersion}`);
+  // Handle complex version ranges with OR operator
+  if (currentVersion.includes('||')) {
+    logger.info(`Complex version range detected: ${currentVersion}`);
+    // For complex ranges, just update with the latest version and preserve the original prefix
+    const versionPrefix = getVersionPrefix(currentVersion);
+    const updatedVersion = versionPrefix + latestVersion.replace(/^[~^]/, "");
+    
+    // Update the package directly without additional validation
+    if (packageJson[sectionType]?.[packageName]) {
+      packageJson[sectionType][packageName] = updatedVersion;
+    } else {
+      vscode.window.showErrorMessage(`Package ${packageName} not found in ${sectionType}.`);
       return;
     }
-    updatedVersion = prefixedVersion;
+  } else {
+    // Regular version handling for simple version strings
+    
+    // Clean versions for comparison
+    const cleanCurrentVersion = currentVersion.replace(/^[~^]/, "");
+    const cleanLatestVersion = latestVersion.replace(/^[~^]/, "");
+  
+    if (!cleanLatestVersion) {
+      vscode.window.showErrorMessage(`Invalid version format: ${latestVersion}`);
+      return;
+    }
+  
+    // Compare clean versions
+    const isMajorUpdate = semver.diff(cleanLatestVersion, cleanCurrentVersion) === "major";
+    const versionPrefix = getVersionPrefix(currentVersion);
+  
+    // Only apply prefix if it's not a major update and we had a prefix before
+    let updatedVersion = cleanLatestVersion;
+    if (!isMajorUpdate && versionPrefix) {
+      // Validate the version with prefix is valid
+      const prefixedVersion = versionPrefix + cleanLatestVersion;
+      if (!semver.validRange(prefixedVersion)) {
+        vscode.window.showErrorMessage(`Invalid version format after applying prefix: ${prefixedVersion}`);
+        return;
+      }
+      updatedVersion = prefixedVersion;
+    }
+    
+    // Update the package in the specified section
+    if (packageJson[sectionType]?.[packageName]) {
+      packageJson[sectionType][packageName] = updatedVersion;
+    } else {
+      vscode.window.showErrorMessage(`Package ${packageName} not found in ${sectionType}.`);
+      return;
+    }
   }
 
-  // Only update the specified section
-  if (sectionType === 'dependencies' && packageJson.dependencies?.[packageName]) {
-    packageJson.dependencies[packageName] = updatedVersion;
-  } else if (sectionType === 'devDependencies' && packageJson.devDependencies?.[packageName]) {
-    packageJson.devDependencies[packageName] = updatedVersion;
+  // Make sure we're dealing with a valid dependency section
+  if (!allDependencyTypes.includes(sectionType)) {
+    vscode.window.showErrorMessage(`Invalid dependency section: ${sectionType}`);
+    return;
   }
 
   const updatedText = JSON.stringify(packageJson, null, 2);
