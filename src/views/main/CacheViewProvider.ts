@@ -161,39 +161,50 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
             showMajor: config.get<boolean>('major', true)
         };
 
+        // Interface extension to include section label information
+        /**
+         * Interface extension to include section label information
+         * - sectionType: The type of dependency section (dependencies, devDependencies, etc.)
+         * - sectionLabel: The label to display (dev), (peer), (opt), (bnd)
+         */
+        interface IDependencyDataWithSection extends IDependencyData {
+            sectionType?: string;
+            sectionLabel?: string;
+        }
+        
         // Get current package.json content if any is open
-        let currentPackageDeps: Record<string, IDependencyData> = {};
+        let currentPackageDeps: Record<string, IDependencyDataWithSection> = {};
         const activeEditor = vscode.window.activeTextEditor;
         if (activeEditor && activeEditor.document.fileName.endsWith('package.json')) {
             try {
                 const packageJson = JSON.parse(activeEditor.document.getText());
-                // Process dependencies
-                if (packageJson.dependencies) {
-                    for (const [name, version] of Object.entries(packageJson.dependencies)) {
-                        if (dependenciesData[name]) {
-                            const updateTypeResult = getUpdateType(version as string, dependenciesData[name].version as string);
-                            if (updateTypeResult === 'major' || updateTypeResult === 'minor' ||
-                                updateTypeResult === 'patch' || updateTypeResult === 'latest') {
-                                currentPackageDeps[name + '@' + version] = {
-                                    ...dependenciesData[name],
-                                    updateType: UpdateType[updateTypeResult]
-                                };
-                            }
-                        }
-                    }
-                }
-
-                // Process devDependencies
-                if (packageJson.devDependencies) {
-                    for (const [name, version] of Object.entries(packageJson.devDependencies)) {
-                        if (dependenciesData[name]) {
-                            const updateTypeResult = getUpdateType(version as string, dependenciesData[name].version as string);
-                            if (updateTypeResult === 'major' || updateTypeResult === 'minor' ||
-                                updateTypeResult === 'patch' || updateTypeResult === 'latest') {
-                                currentPackageDeps[name + '@' + version] = {
-                                    ...dependenciesData[name],
-                                    updateType: UpdateType[updateTypeResult]
-                                };
+                
+                // Define all dependency sections to process
+                const dependencySections = [
+                    { type: 'dependencies', label: '' },                // No label for regular dependencies
+                    { type: 'devDependencies', label: 'dev' },        // Label for dev dependencies
+                    { type: 'peerDependencies', label: 'peer' },      // Label for peer dependencies
+                    { type: 'optionalDependencies', label: 'opt' },   // Label for optional dependencies
+                    { type: 'bundleDependencies', label: 'bnd' },     // Label for bundle dependencies
+                    { type: 'bundledDependencies', label: 'bnd' }     // Label for bundled dependencies (alternative name)
+                ];
+                
+                // Process all dependency types
+                for (const section of dependencySections) {
+                    if (packageJson[section.type]) {
+                        for (const [name, version] of Object.entries(packageJson[section.type])) {
+                            if (dependenciesData[name]) {
+                                const updateTypeResult = getUpdateType(version as string, dependenciesData[name].version as string);
+                                if (updateTypeResult === 'major' || updateTypeResult === 'minor' ||
+                                    updateTypeResult === 'patch' || updateTypeResult === 'latest') {
+                                    // Store the section type and label
+                                    currentPackageDeps[name + '@' + version] = {
+                                        ...dependenciesData[name],
+                                        updateType: UpdateType[updateTypeResult],
+                                        sectionType: section.type,
+                                        sectionLabel: section.label
+                                    };
+                                }
                             }
                         }
                     }
@@ -384,7 +395,23 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
     private _getHtmlForWebview(webview: vscode.Webview) {
         const nonce = getNonce();
 
+        const sectionsStyle = `
+            <style>
+                .section-label {
+                    display: inline-block;
+                    font-size: 1.2rem;
+                    padding: 0.1rem 0.4rem;
+                    margin-left: 0.4rem;
+                    border-radius: 1rem;
+                    background-color: rgba(128, 128, 128, 0.2);
+                    color: #ccc;
+                    font-weight: normal;
+                }
+            </style>
+        `;
+
         const settingsSection = `
+            ${sectionsStyle}
             <div class="settings-section">
                 <h4 class="settings-title">CodeLens</h4>
                 <div class="settings-group">
@@ -567,11 +594,14 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                                             packageName: info.name 
                                         });
                                     };
+                                    // Add section label if it exists
+                                    const sectionLabel = info.sectionLabel ? ' <span class="section-label">' + info.sectionLabel + '</span> ' : '';
+                                    
                                     div.innerHTML = 
                                         '<p>' +
-                                        '<strong>📦 ' + info.name + '</strong> ' +
+                                        '<strong>📦 ' + info.name + '</strong>' + 
                                         '<span class="dimmed">⇢</span> ' +
-                                        '<strong>' + info.version + '</strong>' +
+                                        '<strong>' + info.version + '</strong>' + sectionLabel +
                                         '</p>' +
                                         '<p class="dimmed">' + stripHtml(info.description || '') + '</p>';
                                     groupDiv.appendChild(div);
@@ -598,9 +628,13 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                                         packageName: info.name 
                                     });
                                 };
+                                // Add section label if it exists
+                                const sectionLabel = info.sectionLabel ? ' <span class="section-label">' + info.sectionLabel + '</span> ' : '';
+                                
                                 div.innerHTML = 
                                     '<p>' +
-                                    '<strong>📦 ' + info.name + '</strong> ' +
+                                    '<strong>📦 ' + info.name + '</strong>' + 
+                                    '<span class="version-info">' + sectionLabel + '</span>' +
                                     '</p>' +
                                     '<p class="dimmed">' + stripHtml(info.description || '') + '</p>';
                                 groupDiv.appendChild(div);
