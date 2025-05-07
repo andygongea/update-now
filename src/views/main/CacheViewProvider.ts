@@ -182,11 +182,11 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
                 // Define all dependency sections to process
                 const dependencySections = [
                     { type: 'dependencies', label: '' },                // No label for regular dependencies
-                    { type: 'devDependencies', label: 'dev' },        // Label for dev dependencies
-                    { type: 'peerDependencies', label: 'peer' },      // Label for peer dependencies
-                    { type: 'optionalDependencies', label: 'opt' },   // Label for optional dependencies
-                    { type: 'bundleDependencies', label: 'bnd' },     // Label for bundle dependencies
-                    { type: 'bundledDependencies', label: 'bnd' }     // Label for bundled dependencies (alternative name)
+                    { type: 'devDependencies', label: 'DEV' },        // Label for dev dependencies
+                    { type: 'peerDependencies', label: 'PEER' },      // Label for peer dependencies
+                    { type: 'optionalDependencies', label: 'OPT' },   // Label for optional dependencies
+                    { type: 'bundleDependencies', label: 'BND' },     // Label for bundle dependencies
+                    { type: 'bundledDependencies', label: 'BND' }     // Label for bundled dependencies (alternative name)
                 ];
                 
                 // Process all dependency types
@@ -398,13 +398,16 @@ export class CacheViewProvider implements vscode.WebviewViewProvider, vscode.Dis
         const sectionsStyle = `
             <style>
                 .section-label {
+                    float: right;
                     display: inline-block;
-                    font-size: 1.2rem;
-                    padding: 0.1rem 0.4rem;
+                    font-size: 1.1rem;
+                    padding: 0.1rem 0.4rem 0.2rem;
                     margin-left: 0.4rem;
                     border-radius: 1rem;
-                    background-color: rgba(128, 128, 128, 0.2);
-                    color: #ccc;
+                    letter-spacing: 1px;
+                    line-height: 1;
+                    background-color: rgba(100, 100, 100, 1);
+                    color: #fff;
                     font-weight: normal;
                 }
             </style>
