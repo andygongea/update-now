@@ -638,44 +638,42 @@ async function updateAllDependencies(context: vscode.ExtensionContext, documentU
   logger.info('Starting update all dependencies process');
   const document = await vscode.workspace.openTextDocument(documentUri);
   const packageJson = JSON.parse(document.getText());
-  const dependencies = packageJson.dependencies || {};
-  const devDependencies = packageJson.devDependencies || {};
   const storedDependencies = context.workspaceState.get<Record<string, IDependencyData>>('dependenciesData', {});
   const dependenciesToUpdate: string[] = [];
 
-  logger.debug('Initial package.json state:', { dependencies, devDependencies });
+  // Define all dependency sections to process
+  const dependencySections = [
+    'dependencies',
+    'devDependencies',
+    'peerDependencies',
+    'optionalDependencies',
+    'bundleDependencies',
+    'bundledDependencies'
+  ];
 
-  // Process regular dependencies
-  for (const packageName in dependencies) {
-    try {
-      logger.info(`Processing package in dependencies: ${packageName}`);
-      const currentVersion = dependencies[packageName];
+  logger.debug('Processing all dependency sections');
 
-      if (isURL(currentVersion)) {
-        logger.info(`Skipping ${packageName} - URL dependency`);
-        continue;
+  // Process all dependency types
+  for (const sectionType of dependencySections) {
+    if (packageJson[sectionType]) {
+      const sectionDeps = packageJson[sectionType];
+      logger.info(`Processing dependencies in section: ${sectionType} (${Object.keys(sectionDeps).length} packages)`);
+      
+      for (const packageName in sectionDeps) {
+        try {
+          logger.info(`Processing package in ${sectionType}: ${packageName}`);
+          const currentVersion = sectionDeps[packageName];
+
+          if (isURL(currentVersion)) {
+            logger.info(`Skipping ${packageName} - URL dependency`);
+            continue;
+          }
+
+          await processPackageUpdate(packageName, currentVersion, sectionType);
+        } catch (error) {
+          logger.error(`Error processing package ${packageName} in ${sectionType}`, error);
+        }
       }
-
-      await processPackageUpdate(packageName, currentVersion, 'dependencies');
-    } catch (error) {
-      logger.error(`Error processing package ${packageName} in dependencies`, error);
-    }
-  }
-
-  // Process dev dependencies
-  for (const packageName in devDependencies) {
-    try {
-      logger.info(`Processing package in devDependencies: ${packageName}`);
-      const currentVersion = devDependencies[packageName];
-
-      if (isURL(currentVersion)) {
-        logger.info(`Skipping ${packageName} - URL dependency`);
-        continue;
-      }
-
-      await processPackageUpdate(packageName, currentVersion, 'devDependencies');
-    } catch (error) {
-      logger.error(`Error processing package ${packageName} in devDependencies`, error);
     }
   }
 
