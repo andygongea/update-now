@@ -8,6 +8,16 @@ With just one click in your `package.json`, you can view and apply updates while
 
 
 
+
+
+
+
+https://github.com/user-attachments/assets/7286ad2a-3d1c-49dc-b5e5-4b87c8c3bf31
+
+
+
+
+
 ## ✨ Key Features
 ### 🎯 One-Click Updates
 - **Direct in package.json**: Update dependencies right where you see them with intuitive CodeLens
